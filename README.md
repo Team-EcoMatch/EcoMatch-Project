@@ -1,2 +1,2 @@
 # EcoMatch-Frontend
-Repositorio fornt-end  EcoMatch
+Repositorio front-end  EcoMatch
