@@ -1,2 +1,2 @@
-# EcoMatch-Frontend
-Repositorio front-end  EcoMatch
+# EcoMatch-Project
+Repositorio para el desarrollo del proyecto EcoMatch
