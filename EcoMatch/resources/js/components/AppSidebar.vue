@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid } from '@lucide/vue';
+import { BookOpen, FolderGit2, LayoutGrid, PackageSearch, Search, Tags } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -31,6 +31,17 @@ const mainNavItems = computed<NavItem[]>(() => [
         href: dashboardUrl.value,
         icon: LayoutGrid,
     },
+    {
+        title: 'Categorias',
+        href: '/categorias',
+        icon: Tags,
+    },
+    {
+        title: 'Publicaciones',
+        href: '/publicaciones',
+        icon: PackageSearch,
+    }
+    
 ]);
 
 const footerNavItems: NavItem[] = [
@@ -75,5 +86,4 @@ const footerNavItems: NavItem[] = [
             <NavUser />
         </SidebarFooter>
     </Sidebar>
-    <slot />
 </template>
