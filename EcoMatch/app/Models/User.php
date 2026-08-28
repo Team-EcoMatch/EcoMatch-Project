@@ -31,7 +31,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, Membership> $teamMemberships
  * @property-read Collection<int, Team> $teams
  */
-#[Fillable(['name', 'email', 'password', 'current_team_id'])]
+#[Fillable(['name', 'email', 'password', 'current_team_id', 'idEmpresa', 'idRol', 'estado'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -49,5 +49,15 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class, 'idEmpresa', 'idempresa');
+    }
+
+    public function rol()
+    {
+        return $this->belongsTo(Rol::class, 'idRol', 'idrol');
     }
 }
