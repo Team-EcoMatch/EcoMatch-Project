@@ -42,11 +42,11 @@ class PublicacionController extends Controller
             'frecuencia' => 'required|string',
             'urlImagen' => 'required|string',
         ]);
-        $validated['estado'] = 'Disponible';
+        $validated['estado'] = 'Pendiente';
         $validated['empresa_idempresa'] = $validated['idEmpresa'];
 
         Publicacion::create($validated);
-        return redirect()->back()->with('message', 'Publicación creada correctamente');
+        return redirect()->back()->with('message', 'Publicación enviada para aprobación');
 
     }
 
@@ -78,7 +78,7 @@ class PublicacionController extends Controller
             'estado' => 'required|string',
             'urlImagen' => 'required|string',
         ]);
-        $validated['empresa_idempresa'] = $validated['idempresa'];
+        $validated['empresa_idempresa'] = $validated['idEmpresa'];
 
         $publicacion->update($validated);
         return redirect()->route('publicaciones.index')->with('message', 'Publicación actualizada correctamente.');
@@ -90,5 +90,15 @@ class PublicacionController extends Controller
         $publicacion = Publicacion::findOrFail($id);
         $publicacion->delete();
         return redirect()->back()->with('message', 'Publicación eliminada correctamente.');
+    }
+
+    public function approve(int $id)
+    {
+        $publicacion = Publicacion::findOrFail($id);
+
+        $publicacion->estado = 'Disponible';
+        $publicacion->save();
+
+        return redirect()->back()->with('message', 'Publicación aprobada y ahora es visible');
     }
 }

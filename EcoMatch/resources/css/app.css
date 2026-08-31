@@ -170,3 +170,13 @@
         @apply bg-background text-foreground;
     }
 }
+.swal2-popup {
+    border: 1px solid hsl(217 33% 25%) !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.8) !important; 
+    border-radius: 0.75rem !important; 
+}
+
+.swal2-backdrop-show {
+    backdrop-filter: blur(2px) !important;
+}
+

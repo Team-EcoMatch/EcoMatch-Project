@@ -5,42 +5,87 @@ namespace App\Http\Controllers;
 use App\Models\Categoria;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 
 class CategoriaController extends Controller
 {
     public function index()
     {
-        $categorias = Categoria::with('empresa')->get();
-        return Inertia::render('Categorias/Index', ['categorias' => $categorias]);
+        $idEmpresa = Auth::user()->idEmpresa;
+
+        $categorias = Categoria::where('empresa_idempresa', $idEmpresa)->get();
+
+        $message = session('message');
+        return Inertia::render('Categorias/Index', [
+            'categorias' => $categorias,
+            'message' => $message
+        ]);
+    }
+
+    public function create()
+    {
+        return Inertia::render('Categorias/Create');
+    }
+
+    public function edit(int $id)
+    {
+        $idEmpresa = Auth::user()->idEmpresa;
+        
+        $categoria = Categoria::where('empresa_idempresa', $idEmpresa)->findOrFail($id);
+        
+        return Inertia::render('Categorias/Edit', ['categoria' => $categoria]);
     }
 
     public function store(Request $request)
     {
+        $idEmpresa = Auth::user()->idEmpresa;
+
         $validated = $request->validate([
-            'nombre' => 'required|string|max:150',
+            'nombre' => [
+                'required', 'string', 'max:150',
+                Rule::unique('categorias')->where(function ($query) use ($idEmpresa) {
+                    return $query->where('empresa_idempresa', $idEmpresa);
+                })
+            ],
             'descripcion' => 'nullable|string|max:150',
-            'empresa_idempresa' => 'required|integer|exists:empresa,idempresa',
+        ], [
+            'nombre.unique' => 'Ya existe una categoría con este nombre en tu empresa.',
         ]);
 
+        $validated['empresa_idempresa'] = $idEmpresa;
+
         Categoria::create($validated);
-        return redirect()->back()->with('message', 'Categoría creada exitosamente.');
+        return redirect()->route('categorias.index')->with('message', 'Categoría creada exitosamente.');
     }
 
     public function update(Request $request, int $id)
     {
-        $categoria = Categoria::findOrFail($id);
+        $idEmpresa = Auth::user()->idEmpresa;
+        $categoria = Categoria::where('empresa_idempresa', $idEmpresa)->findOrFail($id);
+
         $validated = $request->validate([
-            'nombre' => 'required|string|max:150',
+            'nombre' => [
+                'required', 'string', 'max:150',
+                Rule::unique('categorias')->ignore($categoria->idcategorias, 'idcategorias')->where(function ($query) use ($idEmpresa) {
+                    return $query->where('empresa_idempresa', $idEmpresa);
+                })
+            ],
             'descripcion' => 'nullable|string|max:150',
+        ], [
+            'nombre.unique' => 'Ya existe una categoría con este nombre en tu empresa.',
         ]);
+
         $categoria->update($validated);
-        return redirect()->back()->with('message', 'Categoría actualizada');
+        return redirect()->route('categorias.index')->with('message', 'Categoría actualizada exitosamente.');
     }
 
     public function destroy(int $id)
     {
-        $categoria = Categoria::findOrFail($id);
+        $idEmpresa = Auth::user()->idEmpresa;
+        $categoria = Categoria::where('empresa_idempresa', $idEmpresa)->findOrFail($id);
+        
         $categoria->delete();
-        return redirect()->back()->with('message', 'Categoría elimanada correctamente');
+        return redirect()->route('categorias.index')->with('message', 'Categoría eliminada correctamente.');
     }
 }
