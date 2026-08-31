@@ -25,36 +25,31 @@ Route::middleware(['auth'])->group(function () {
 
 require __DIR__.'/settings.php';
 
+Route::middleware(['auth', 'verified'])->group(function () {
 
-Route::middleware(['auth', 'verified'])->group(function(){
+    Route::get('/empresas/{id}/edit', [EmpresaController::class, 'edit'])->name('empresas.edit');
+    Route::put('/empresas/{id}', [EmpresaController::class, 'update'])->name('empresas.update');
+    Route::get('/empresas/{id}', [EmpresaController::class, 'show'])->name('empresas.show');
 
+    Route::get('/categorias', [CategoriaController::class, 'index'])->name('categorias.index');
+    Route::get('/categorias/create', [CategoriaController::class, 'create'])->name('categorias.create');
+    Route::post('/categorias', [CategoriaController::class, 'store'])->name('categorias.store');
+    Route::get('/categorias/{id}/edit', [CategoriaController::class, 'edit'])->name('categorias.edit');
+    Route::put('/categorias/{id}', [CategoriaController::class, 'update'])->name('categorias.update');
+    Route::delete('/categorias/{id}', [CategoriaController::class, 'destroy'])->name('categorias.destroy');
 
-Route::get('/publicaciones', [PublicacionController::class, 'index'])
-    ->middleware(['auth', 'verified'])
-    ->name('publicaciones.index');
+    Route::get('/publicaciones', [PublicacionController::class, 'index'])->name('publicaciones.index');
+    Route::get('/publicaciones/create', [PublicacionController::class, 'create'])->name('publicaciones.create');
+    Route::post('/publicaciones', [PublicacionController::class, 'store'])->name('publicaciones.store');
+    Route::get('/publicaciones/{id}/edit', [PublicacionController::class, 'edit'])->name('publicaciones.edit');
+    Route::put('/publicaciones/{id}', [PublicacionController::class, 'update'])->name('publicaciones.update');
+    Route::delete('/publicaciones/{id}', [PublicacionController::class, 'destroy'])->name('publicaciones.destroy');
+    Route::post('/publicaciones/{id}/approve', [PublicacionController::class, 'approve'])->name('publicaciones.approve');
 
-Route::get('/empresas/{id}edit', [EmpresaController::class, 'edit'])->name('empresas.edit');
-Route::put('/empresas/{id}', [EmpresaController::class, 'update'])->name('empressas.update');
-Route::get('/empresas{id}', [EmpresaController::class, 'show'])->name('empresas.show');
+    Route::get('/solicitudes', [SolicitudController::class, 'index'])->name('solicitudes.index');
+    Route::post('/solicitudes', [SolicitudController::class, 'store'])->name('solicitudes.store');
+    Route::put('/solicitudes/{id}', [SolicitudController::class, 'update'])->name('solicitudes.update');
 
+    Route::get('/mapa', [MapaController::class, 'index'])->name('mapa.index');
 
-Route::get('/categorias', [CategoriaController::class, 'index'])->name('categorias.index');
-Route::post('/categorias', [CategoriaController::class, 'store'])->name('categorias.store');
-Route::put('/categorias/{id}', [CategoriaController::class, 'update'])->name('categorias.update');
-Route::delete('/categorias/{id}', [CategoriaController::class, 'destroy'])->name('categorias.destroy');
-
-Route::get('/publicaciones', [PublicacionController::class, 'index'])->name('publicaciones.index');
-Route::get('/publicaciones/create', [PublicacionController::class, 'create'])->name('publicaciones.create');
-Route::post('/publicaciones', [PublicacionController::class, 'store'])->name('publicaciones.store');
-Route::get('/publicaciones/{id}/edit', [PublicacionController::class, 'edit'])->name('publicaciones.edit');
-Route::put('/publicaciones/{id}', [PublicacionController::class, 'update'])->name('publicaciones.update');
-Route::delete('/publicaciones/{id}', [PublicacionController::class, 'destroy'])->name('publicaciones.destroy');
-
-
-Route::get('/solicitudes', [SolicitudController::class, 'index'])->name('solicitudes.index');
-Route::post('/solicitudes', [SolicitudController::class, 'store'])->name('solicitudes.store');
-Route::put('/solicitudes/{id}', [SolicitudController::class, 'update'])->name('solicitudes.update');
-
-Route::get('/mapa', [MapaController::class, 'index'])->name('mapa.index');
-});
-
+}); 
