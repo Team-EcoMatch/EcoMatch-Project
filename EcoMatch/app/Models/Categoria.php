@@ -9,15 +9,15 @@ class Categoria extends Model
     protected $table = 'categorias';
     protected $primaryKey = 'idcategorias';
 
-    protected $fillable = ['nombre', 'descripcion', 'empresa_idempresa'];
+    protected $fillable = ['nombre', 'descripcion', 'idempresa'];
 
     public function empresa()
     {
-        return $this->belongsTo(Empresa::class, 'empresa_idempresa');
+        return $this->belongsTo(Empresa::class, 'idempresa');
     }
 
     public function publicaciones()
     {
-        return $this->hasMany(Publicacion::class, 'idCategoria');
+        return $this->hasMany(Publicacion::class, 'idcategorias');
     }
 }
