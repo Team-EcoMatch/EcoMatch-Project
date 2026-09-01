@@ -10,20 +10,20 @@ class SolicitudController extends Controller
 {
     public function index()
     {
-        $solicitudes = Solicitud::with(['publicacion', 'mensajes'])->get();
+        $solicitudes = Solicitud::with(['publicacion.empresa', 'empresaOrigen', 'empresaDestino', 'mensajes'])->get();
         return Inertia::render('Solicitudes/Index', ['solicitudes' => $solicitudes]);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'idpublicaciones' => 'required|integer|exists:publicaciones,idpublicaciones',
-            'idEmpresaOrigen' => 'required|integer',
-            'idEmpresaDestino' => 'required|integer',
-            'mensaje' => 'required|string',
+            'idpublicaciones'  => 'required|integer|exists:publicaciones,idpublicaciones',
+            'idEmpresaOrigen'  => 'required|integer|exists:empresa,idempresa',
+            'idEmpresaDestino' => 'required|integer|exists:empresa,idempresa',
+            'mensaje'          => 'required|string',
         ]);
-        $validated['estado'] = 'Pendiente';
-        $validated['publicaciones_idpublicaciones'] = $validated['idpublicaciones'];
+        
+        $validated['estado'] = 'Pendiente'; 
 
         Solicitud::create($validated);
         return redirect()->back()->with('message', 'Solicitud enviada correctamente');
@@ -35,6 +35,7 @@ class SolicitudController extends Controller
         $validated = $request->validate([
             'estado' => 'required|in:Pendiente,Aceptado,Rechazado,Completado',
         ]);
+        
         $solicitud->update($validated);
         return redirect()->back()->with('message', 'Estado de solicitud actualizado correctamente');
     }

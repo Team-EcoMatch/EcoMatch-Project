@@ -20,17 +20,17 @@ class Empresa extends Model
 
     public function categorias()
     {
-        return $this->hasMany(Categoria::class, 'empresa_idempresa');
+        return $this->hasMany(Categoria::class, 'idempresa');
     }
 
     public function publicaciones()
     {
-        return $this->hasMany(Publicacion::class, 'empresa_idempresa');
+        return $this->hasMany(Publicacion::class, 'idempresa');
     }
 
     public function roles()
     {
-        return $this->hasMany(Rol::class, 'empresa_idempresa');
+        return $this->hasMany(Rol::class, 'idempresa');
     }
 
     public function users()

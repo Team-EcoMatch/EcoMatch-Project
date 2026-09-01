@@ -10,7 +10,7 @@ class Mensaje extends Model
     protected $primaryKey = 'idmensajes';
 
     protected $fillable = [
-        'idsolicitud', 'idEmisora', 'contenido', 'leido', 'solicitudes_idsolicitud'
+        'idsolicitud', 'idEmisora', 'contenido', 'leido', 
     ];
 
     protected $casts = [
@@ -19,6 +19,11 @@ class Mensaje extends Model
 
     public function solicitud()
     {
-        return $this->belongsTo(Solicitud::class, 'solicitudes_idsolicitud');
+        return $this->belongsTo(Solicitud::class, 'idsolicitud');
+    }
+
+    public function empresaEmisora()
+    {
+        return $this->belongsTo(Empresa::class, 'idEmisora');
     }
 }

@@ -14,7 +14,7 @@ class CategoriaController extends Controller
     {
         $idEmpresa = Auth::user()->idEmpresa;
 
-        $categorias = Categoria::where('empresa_idempresa', $idEmpresa)->get();
+        $categorias = Categoria::where('idempresa', $idEmpresa)->get();
 
         $message = session('message');
         return Inertia::render('Categorias/Index', [
@@ -32,7 +32,7 @@ class CategoriaController extends Controller
     {
         $idEmpresa = Auth::user()->idEmpresa;
         
-        $categoria = Categoria::where('empresa_idempresa', $idEmpresa)->findOrFail($id);
+        $categoria = Categoria::where('idempresa', $idEmpresa)->findOrFail($id);
         
         return Inertia::render('Categorias/Edit', ['categoria' => $categoria]);
     }
@@ -45,7 +45,7 @@ class CategoriaController extends Controller
             'nombre' => [
                 'required', 'string', 'max:150',
                 Rule::unique('categorias')->where(function ($query) use ($idEmpresa) {
-                    return $query->where('empresa_idempresa', $idEmpresa);
+                    return $query->where('idempresa', $idEmpresa);
                 })
             ],
             'descripcion' => 'nullable|string|max:150',
@@ -53,7 +53,7 @@ class CategoriaController extends Controller
             'nombre.unique' => 'Ya existe una categoría con este nombre en tu empresa.',
         ]);
 
-        $validated['empresa_idempresa'] = $idEmpresa;
+        $validated['idempresa'] = $idEmpresa;
 
         Categoria::create($validated);
         return redirect()->route('categorias.index')->with('message', 'Categoría creada exitosamente.');
@@ -62,13 +62,13 @@ class CategoriaController extends Controller
     public function update(Request $request, int $id)
     {
         $idEmpresa = Auth::user()->idEmpresa;
-        $categoria = Categoria::where('empresa_idempresa', $idEmpresa)->findOrFail($id);
+        $categoria = Categoria::where('idempresa', $idEmpresa)->findOrFail($id);
 
         $validated = $request->validate([
             'nombre' => [
                 'required', 'string', 'max:150',
                 Rule::unique('categorias')->ignore($categoria->idcategorias, 'idcategorias')->where(function ($query) use ($idEmpresa) {
-                    return $query->where('empresa_idempresa', $idEmpresa);
+                    return $query->where('idempresa', $idEmpresa);
                 })
             ],
             'descripcion' => 'nullable|string|max:150',
@@ -83,7 +83,7 @@ class CategoriaController extends Controller
     public function destroy(int $id)
     {
         $idEmpresa = Auth::user()->idEmpresa;
-        $categoria = Categoria::where('empresa_idempresa', $idEmpresa)->findOrFail($id);
+        $categoria = Categoria::where('idempresa', $idEmpresa)->findOrFail($id);
         
         $categoria->delete();
         return redirect()->route('categorias.index')->with('message', 'Categoría eliminada correctamente.');

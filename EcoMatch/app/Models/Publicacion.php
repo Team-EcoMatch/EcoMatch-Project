@@ -16,16 +16,16 @@ class Publicacion extends Model
 
     public function empresa()
     {
-        return $this->belongsTo(Empresa::class, 'empresa_idempresa');
+        return $this->belongsTo(Empresa::class, 'idempresa');
     }
 
     public function categoria()
     {
-        return $this->belongsTo(Categoria::class, 'idCategoria', 'idcategorias');
+        return $this->belongsTo(Categoria::class, 'idcategorias', 'idcategorias');
     }
 
     public function solicitudes()
     {
-        return $this->hasMany(Solicitud::class, 'publicaciones_idpublicaciones');
+        return $this->hasMany(Solicitud::class, 'idpublicaciones');
     }
 }
