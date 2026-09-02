@@ -10,21 +10,17 @@ class Rol extends Model
     protected $primaryKey = 'idroles';
 
     protected $fillable = [
-        'tipo', 'idempresa'
+        'tipo', 'empresa_idempresa'
     ];
 
 
     public function empresa()
     {
-        return $this->belongsTo(Empresa::class, 'idempresa');
+        return $this->belongsTo(Empresa::class, 'empresa_idempresa');
     }
 
     public function usuarios()
     {
-<<<<<<< Updated upstream
-        return $this->hasMany(User::class, 'idroles');
-=======
         return $this->hasMany(User::class, 'idRol', 'idroles');
->>>>>>> Stashed changes
     }
 }

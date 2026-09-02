@@ -11,26 +11,17 @@ class Solicitud extends Model
 
     protected $fillable = [
         'idpublicaciones', 'idEmpresaOrigen', 'idEmpresaDestino',
-        'mensaje', 'estado',
+        'mensaje', 'estado', 'publicaciones_idpublicaciones'
     ];
 
     public function publicacion()
     {
-        return $this->belongsTo(Publicacion::class, 'idpublicaciones');
-    }
-
-    public function empresaOrigen()
-    {
-        return $this->belongsTo(Empresa::class, 'idEmpresaOrigen');
-    }
-
-    public function empresaDestino(){
-        return $this->belongsTo(Empresa::class, 'idEmpresaDestino');
+        return $this->belongsTo(Publicacion::class, 'publicaciones_idpublicaciones');
     }
 
     public function mensajes()
     {
-        return $this->hasMany(Mensaje::class, 'idsolicitud');
+        return $this->hasMany(Mensaje::class, 'solicitudes_idsolicitud');
     }
 
     public function empresaOrigen()
@@ -42,4 +33,5 @@ class Solicitud extends Model
     {
         return $this->belongsTo(Empresa::class, 'idEmpresaDestino', 'idempresa');
     }
+
 }
