@@ -14,11 +14,12 @@ import {
     AlertDialogTitle, 
     AlertDialogTrigger 
 } from '@/components/ui/alert-dialog';
-import { Pencil, Trash2, CheckCircle2, X, Plus } from 'lucide-vue-next';
+import { Pencil, Trash2, CheckCircle2, X, Plus, ArrowLeftRight } from 'lucide-vue-next';
 import { ref, onMounted } from 'vue';
 
 interface Publicacion {
     idpublicaciones: number;
+    idempresa: number;
     nombre: string;
     descripcion: string;
     cantidad: string | number;
@@ -26,6 +27,7 @@ interface Publicacion {
     frecuencia: string;
     estado: string;
     urlImagen: string;
+    idEmpresa: number;
     empresa: { nombreEmpresa: string } | null;
     categoria: { nombre: string } | null;
 }
@@ -33,6 +35,7 @@ interface Publicacion {
 const props = defineProps<{
     publicaciones: Publicacion[];
     message: string | null;
+    empresaAuthId: number;
 }>();
 
 const showNotification = ref(false);
@@ -49,18 +52,32 @@ function triggerNotification(msg: string) {
     showNotification.value = true;
     setTimeout(() => {
         showNotification.value = false;
-    }, 3000); 
+    }, 3000);
 }
 
 function deletePublicacion(id: number) {
     useForm({}).delete('/publicaciones/' + id, {
         preserveScroll: true,
-        preserveState: true, 
+        preserveState: true,
         onSuccess: (page) => {
             const msg = (page.props.message as string) || 'Publicación eliminada correctamente.';
             triggerNotification(msg);
         }
     });
+}
+
+function solicitarIntercambio(idpublicaciones: number) {
+    useForm({ idpublicaciones }).post('/solicitudes', {
+        preserveScroll: true,
+        onSuccess: (page) => {
+            const msg = (page.props.message as string) || 'Solicitud de intercambio enviada.';
+            triggerNotification(msg);
+        }
+    });
+}
+
+function esDueno(pub: Publicacion): boolean {
+    return pub.idempresa === props.empresaAuthId;
 }
 </script>
 
@@ -68,7 +85,8 @@ function deletePublicacion(id: number) {
     <div class="p-6 bg-background min-h-screen text-foreground">
         <Head title="Publicaciones"/>
 
-        <Transition enter-active-class="transition-all duration-300 ease-out"
+        <Transition
+            enter-active-class="transition-all duration-300 ease-out"
             enter-from-class="opacity-0 translate-y-[-10px] scale-95"
             enter-to-class="opacity-100 translate-y-0 scale-100"
             leave-active-class="transition-all duration-300 ease-in"
@@ -81,12 +99,8 @@ function deletePublicacion(id: number) {
                         <CheckCircle2 class="h-5 w-5 text-green-500" />
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="font-semibold text-foreground">
-                            Acción completada
-                        </p>
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            {{ notificationMessage }}
-                        </p>
+                        <p class="font-semibold text-foreground">Acción completada</p>
+                        <p class="mt-1 text-sm text-muted-foreground">{{ notificationMessage }}</p>
                     </div>
                     <button type="button" @click="showNotification = false"
                         class="text-muted-foreground hover:text-foreground transition-colors">
@@ -109,18 +123,19 @@ function deletePublicacion(id: number) {
                     </Button>
                 </Link>
             </div>
-            
+
             <div v-if="props.publicaciones.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <Card v-for="pub in props.publicaciones" :key="pub.idpublicaciones" class="bg-card border-border shadow-none flex flex-col justify-between overflow-hidden">
+                <Card v-for="pub in props.publicaciones" :key="pub.idpublicaciones"
+                    class="bg-card border-border shadow-none flex flex-col justify-between overflow-hidden">
                     <img :src="pub.urlImagen" alt="Imagen material" class="w-full h-40 object-cover">
-                    
+
                     <CardHeader>
                         <div class="flex justify-between items-center">
                             <CardTitle class="text-xl">{{ pub.nombre }}</CardTitle>
                             <Badge variant="outline" class="border-primary text-primary">{{ pub.estado }}</Badge>
                         </div>
                     </CardHeader>
-                    
+
                     <CardContent class="flex-grow flex flex-col justify-between">
                         <div class="mb-4">
                             <p class="text-sm text-muted-foreground mb-2">{{ pub.descripcion }}</p>
@@ -130,42 +145,61 @@ function deletePublicacion(id: number) {
                             </div>
                             <div class="text-xs text-muted-foreground mt-2">
                                 <div>Categoría: <strong>{{ pub.categoria?.nombre || 'N/A' }}</strong></div>
+                                <div>Empresa: <strong>{{ pub.empresa?.nombreEmpresa || 'N/A' }}</strong></div>
                                 <div>Frecuencia: {{ pub.frecuencia }}</div>
                             </div>
                         </div>
 
                         <div class="flex justify-end gap-2 border-t border-border pt-4">
-                            <Link :href="`/publicaciones/${pub.idpublicaciones}/edit`">
-                                <Button size="sm" variant="outline" class="border-primary text-primary hover:bg-accent hover:text-primary">
-                                    <Pencil class="mr-2 h-4 w-4"/>
-                                    <span>Editar</span>
-                                </Button>
-                            </Link>
-                            
-                            <AlertDialog>
-                                <AlertDialogTrigger as-child>
-                                    <Button size="sm" variant="destructive" class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                        <Trash2 class="mr-2 h-4 w-4"/>
-                                        <span>Eliminar</span>
+
+                            <!-- Botones del dueño -->
+                            <template v-if="esDueno(pub)">
+                                <Link :href="`/publicaciones/${pub.idpublicaciones}/edit`">
+                                    <Button size="sm" variant="outline"
+                                        class="border-primary text-primary hover:bg-accent hover:text-primary">
+                                        <Pencil class="mr-2 h-4 w-4"/>
+                                        Editar
                                     </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent class="bg-card border-border text-foreground">
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
-                                        <AlertDialogDescription class="text-muted-foreground">
-                                            Esta acción no se puede deshacer. Se eliminará permanentemente la publicación "{{ pub.nombre }}".
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
-                                            Cancelar
-                                        </AlertDialogCancel>
-                                        <AlertDialogAction @click="deletePublicacion(pub.idpublicaciones)" class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                            Sí, eliminar
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
+                                </Link>
+
+                                <AlertDialog>
+                                    <AlertDialogTrigger as-child>
+                                        <Button size="sm" variant="destructive"
+                                            class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                            <Trash2 class="mr-2 h-4 w-4"/>
+                                            Eliminar
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent class="bg-card border-border text-foreground">
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+                                            <AlertDialogDescription class="text-muted-foreground">
+                                                Esta acción no se puede deshacer. Se eliminará permanentemente la publicación "{{ pub.nombre }}".
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel
+                                                class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
+                                                Cancelar
+                                            </AlertDialogCancel>
+                                            <AlertDialogAction @click="deletePublicacion(pub.idpublicaciones)"
+                                                class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                                Sí, eliminar
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </template>
+
+                            <!-- Botón para otras empresas -->
+                            <template v-else>
+                                <Button size="sm" @click="solicitarIntercambio(pub.idpublicaciones)"
+                                    class="bg-primary hover:bg-primary/90 text-primary-foreground">
+                                    <ArrowLeftRight class="mr-2 h-4 w-4"/>
+                                    Solicitar Intercambio
+                                </Button>
+                            </template>
+
                         </div>
                     </CardContent>
                 </Card>
@@ -182,12 +216,8 @@ function deletePublicacion(id: number) {
 </template>
 
 <style>
-    @keyframes toast-progress {
-        from {
-            width: 100%;
-        }
-        to {
-            width: 0%;
-        }
-    }
+@keyframes toast-progress {
+    from { width: 100%; }
+    to { width: 0%; }
+}
 </style>

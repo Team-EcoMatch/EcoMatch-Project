@@ -10,7 +10,7 @@ class Publicacion extends Model
     protected $primaryKey = 'idpublicaciones';
 
     protected $fillable = [
-        'idEmpresa', 'idcategorias', 'nombre', 'descripcion', 'cantidad',
+        'idempresa', 'idcategorias', 'nombre', 'descripcion', 'cantidad',
         'unidadMedida', 'frecuencia', 'estado', 'urlImagen', 'idempresa'
     ];
 
