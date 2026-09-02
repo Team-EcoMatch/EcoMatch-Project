@@ -10,17 +10,17 @@ use Illuminate\Support\Facades\Auth;
 
 class PublicacionController extends Controller
 {
-        public function index()
+    public function index()
     {
         $idEmpresa = Auth::user()->idEmpresa;
 
         $publicaciones = Publicacion::with(['empresa', 'categoria'])
-                                    ->where(function ($query) use ($idEmpresa) {
-                                        $query->where('idEmpresa', $idEmpresa)
-                                              ->orWhere('estado', 'Disponible');
-                                    })
-                                    ->latest('idpublicaciones')
-                                    ->get();
+            ->where(function ($query) use ($idEmpresa) {
+                $query->where('idEmpresa', $idEmpresa)
+                    ->orWhere('estado', 'Disponible');
+            })
+            ->latest('idpublicaciones')
+            ->get();
 
         return Inertia::render('Publicaciones/Index', [
             'publicaciones' => $publicaciones
@@ -51,11 +51,11 @@ class PublicacionController extends Controller
             'urlImagen' => 'required|image|mimes:jpg,png,svg|max:2048',
         ]);
 
-                if($request->hasFile('urlImagen')){
+        if ($request->hasFile('urlImagen')) {
             $path = $request->file('urlImagen')->store('publicaciones', 'public');
-            $validated['urlImagen'] = '/storage/' . $path; 
+            $validated['urlImagen'] = '/storage/' . $path;
         }
-        
+
         $validated['estado'] = 'Pendiente';
         $validated['idEmpresa'] = $idEmpresa;
 
@@ -77,7 +77,7 @@ class PublicacionController extends Controller
         ]);
     }
 
-        public function update(Request $request, int $id)
+    public function update(Request $request, int $id)
     {
         $idEmpresa = Auth::user()->idEmpresa;
         $publicacion = Publicacion::where('idEmpresa', $idEmpresa)->findOrFail($id);
@@ -90,10 +90,10 @@ class PublicacionController extends Controller
             'unidadMedida' => 'required|string',
             'frecuencia' => 'required|string',
             'estado' => 'required|string',
-            'urlImagen' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', 
+            'urlImagen' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
-        if($request->hasFile('urlImagen')){
+        if ($request->hasFile('urlImagen')) {
             $path = $request->file('urlImagen')->store('publicaciones', 'public');
             $validated['urlImagen'] = '/storage/' . $path;
         } else {
@@ -109,7 +109,7 @@ class PublicacionController extends Controller
     {
         $idEmpresa = Auth::user()->idEmpresa;
         $publicacion = Publicacion::where('idEmpresa', $idEmpresa)->findOrFail($id);
-        
+
         $publicacion->delete();
 
         return redirect()->route('publicaciones.index')->with('message', 'Publicación eliminada correctamente.');
