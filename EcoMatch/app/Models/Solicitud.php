@@ -33,5 +33,13 @@ class Solicitud extends Model
         return $this->hasMany(Mensaje::class, 'idsolicitud');
     }
 
-    
+    public function empresaOrigen()
+    {
+        return $this->belongsTo(Empresa::class, 'idEmpresaOrigen', 'idempresa');
+    }
+
+    public function empresaDestino()
+    {
+        return $this->belongsTo(Empresa::class, 'idEmpresaDestino', 'idempresa');
+    }
 }

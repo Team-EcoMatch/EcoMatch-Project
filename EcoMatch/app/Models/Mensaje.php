@@ -26,4 +26,9 @@ class Mensaje extends Model
     {
         return $this->belongsTo(Empresa::class, 'idEmisora');
     }
+
+    public function empresaEmisora()
+    {
+        return $this->belongsTo(Empresa::class, 'idEmisora', 'idempresa');
+    }
 }

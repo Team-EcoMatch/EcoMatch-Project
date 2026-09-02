@@ -21,6 +21,10 @@ class Rol extends Model
 
     public function usuarios()
     {
+<<<<<<< Updated upstream
         return $this->hasMany(User::class, 'idroles');
+=======
+        return $this->hasMany(User::class, 'idRol', 'idroles');
+>>>>>>> Stashed changes
     }
 }

@@ -9,6 +9,7 @@ use App\Http\Controllers\SolicitudController;
 use App\Http\Controllers\Teams\TeamInvitationController;
 use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AdminPublicacionController;
 
 Route::inertia('/', 'Welcome')->name('home');
 
@@ -23,7 +24,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('invitations/{invitation}', [TeamInvitationController::class, 'decline'])->name('invitations.decline');
 });
 
-require __DIR__.'/settings.php';
+require __DIR__ . '/settings.php';
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
@@ -52,4 +53,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/mapa', [MapaController::class, 'index'])->name('mapa.index');
 
-}); 
+    //Administar publicaciones 
+    Route::get('/admin/publicaciones', [AdminPublicacionController::class, 'index'])->name('admin.publicaciones.index');
+    Route::patch('/admin/publicaciones/{id}/estado', [AdminPublicacionController::class, 'updateEstado'])->name('admin.publicaciones.updateEstado');
+    Route::patch('/admin/publicaciones/{id}/approve', [AdminPublicacionController::class, 'approve'])->name('admin.publicaciones.approve');
+    Route::patch('/admin/publicaciones/{id}/reject', [AdminPublicacionController::class, 'reject'])->name('admin.publicaciones.reject');
+    Route::delete('/admin/publicaciones/{id}', [AdminPublicacionController::class, 'destroy'])->name('admin.publicaciones.destroy');
+
+    //Busqueda geoespacial
+    Route::get('/buscar', [PublicacionController::class, 'search'])->name('publicaciones.search');
+});
