@@ -1,21 +1,35 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-    AlertDialog, 
-    AlertDialogAction, 
-    AlertDialogCancel, 
-    AlertDialogContent, 
-    AlertDialogDescription, 
-    AlertDialogFooter, 
-    AlertDialogHeader, 
-    AlertDialogTitle, 
-    AlertDialogTrigger 
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
-import { Pencil, Trash2, CheckCircle2, X, Plus, ArrowLeftRight } from 'lucide-vue-next';
-import { ref, onMounted } from 'vue';
+
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from '@/components/ui/dialog';
+
+import { Pencil, Trash2, CheckCircle2, X, Plus, ArrowLeftRight, Search } from 'lucide-vue-next';
+import { ref, onMounted, computed } from 'vue';
 
 interface Publicacion {
     idpublicaciones: number;
@@ -29,17 +43,39 @@ interface Publicacion {
     urlImagen: string;
     idEmpresa: number;
     empresa: { nombreEmpresa: string } | null;
-    categoria: { nombre: string } | null;
+    categoria: { idcategorias: number; nombre: string } | null;
+}
+
+interface Categoria {
+    idcategorias: number;
+    nombre: string;
 }
 
 const props = defineProps<{
     publicaciones: Publicacion[];
+    categorias: Categoria[];
     message: string | null;
-    empresaAuthId: number;
 }>();
+
+const page = usePage();
+const currentEmpresaId = page.props.auth.user.idEmpresa;
 
 const showNotification = ref(false);
 const notificationMessage = ref(props.message || '');
+
+const searchQuery = ref('');
+const selectedCategory = ref('all');
+
+
+
+const filteredPublicaciones = computed(() => {
+    return props.publicaciones.filter(pub => {
+        const matchCategory = selectedCategory.value === 'all' || pub.categoria?.nombre === selectedCategory.value;
+        const matchSearch = pub.nombre.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+            pub.descripcion.toLowerCase().includes(searchQuery.value.toLowerCase());
+        return matchCategory && matchSearch;
+    });
+});
 
 onMounted(() => {
     if (props.message) {
@@ -50,9 +86,7 @@ onMounted(() => {
 function triggerNotification(msg: string) {
     notificationMessage.value = msg;
     showNotification.value = true;
-    setTimeout(() => {
-        showNotification.value = false;
-    }, 3000);
+    setTimeout(() => { showNotification.value = false; }, 3000);
 }
 
 function deletePublicacion(id: number) {
@@ -66,27 +100,41 @@ function deletePublicacion(id: number) {
     });
 }
 
-function solicitarIntercambio(idpublicaciones: number) {
-    useForm({ idpublicaciones }).post('/solicitudes', {
+const solicitudForm = useForm({
+    idpublicaciones: null as number | null,
+    mensaje: ''
+});
+
+const openSolicitudDialog = ref(false);
+
+function abrirModalSolicitud(id: number) {
+    solicitudForm.idpublicaciones = id;
+    solicitudForm.mensaje = '';
+    openSolicitudDialog.value = true;
+}
+
+function enviarSolicitud() {
+    solicitudForm.post('/solicitudes', {
         preserveScroll: true,
         onSuccess: (page) => {
-            const msg = (page.props.message as string) || 'Solicitud de intercambio enviada.';
+            openSolicitudDialog.value = false;
+            const msg = (page.props.message as string) || 'Solicitud enviada correctamente.';
             triggerNotification(msg);
         }
     });
 }
 
 function esDueno(pub: Publicacion): boolean {
-    return pub.idempresa === props.empresaAuthId;
+    return pub.idempresa === currentEmpresaId;
 }
 </script>
 
 <template>
     <div class="p-6 bg-background min-h-screen text-foreground">
-        <Head title="Publicaciones"/>
 
-        <Transition
-            enter-active-class="transition-all duration-300 ease-out"
+        <Head title="Publicaciones" />
+
+        <Transition enter-active-class="transition-all duration-300 ease-out"
             enter-from-class="opacity-0 translate-y-[-10px] scale-95"
             enter-to-class="opacity-100 translate-y-0 scale-100"
             leave-active-class="transition-all duration-300 ease-in"
@@ -124,8 +172,24 @@ function esDueno(pub: Publicacion): boolean {
                 </Link>
             </div>
 
-            <div v-if="props.publicaciones.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <Card v-for="pub in props.publicaciones" :key="pub.idpublicaciones"
+            <div class="flex flex-col md:flex-row gap-4 mb-6">
+                <div class="relative flex-1">
+                    <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input v-model="searchQuery" placeholder="Buscar material..."
+                        class="pl-10 bg-background border-border text-foreground focus-visible:ring-primary" />
+                </div>
+                <select v-model="selectedCategory"
+                    class="h-10 w-full md:w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-primary">
+                    <option value="all">Todas las categorías</option>
+
+                    <option v-for="cat in props.categorias" :key="cat.idcategorias" :value="cat.nombre">
+                        {{ cat.nombre }}
+                    </option>
+                </select>
+            </div>
+
+            <div v-if="filteredPublicaciones.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <Card v-for="pub in filteredPublicaciones" :key="pub.idpublicaciones"
                     class="bg-card border-border shadow-none flex flex-col justify-between overflow-hidden">
                     <img :src="pub.urlImagen" alt="Imagen material" class="w-full h-40 object-cover">
 
@@ -151,13 +215,11 @@ function esDueno(pub: Publicacion): boolean {
                         </div>
 
                         <div class="flex justify-end gap-2 border-t border-border pt-4">
-
-                            <!-- Botones del dueño -->
                             <template v-if="esDueno(pub)">
                                 <Link :href="`/publicaciones/${pub.idpublicaciones}/edit`">
                                     <Button size="sm" variant="outline"
                                         class="border-primary text-primary hover:bg-accent hover:text-primary">
-                                        <Pencil class="mr-2 h-4 w-4"/>
+                                        <Pencil class="mr-2 h-4 w-4" />
                                         Editar
                                     </Button>
                                 </Link>
@@ -166,7 +228,7 @@ function esDueno(pub: Publicacion): boolean {
                                     <AlertDialogTrigger as-child>
                                         <Button size="sm" variant="destructive"
                                             class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                            <Trash2 class="mr-2 h-4 w-4"/>
+                                            <Trash2 class="mr-2 h-4 w-4" />
                                             Eliminar
                                         </Button>
                                     </AlertDialogTrigger>
@@ -174,7 +236,8 @@ function esDueno(pub: Publicacion): boolean {
                                         <AlertDialogHeader>
                                             <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
                                             <AlertDialogDescription class="text-muted-foreground">
-                                                Esta acción no se puede deshacer. Se eliminará permanentemente la publicación "{{ pub.nombre }}".
+                                                Esta acción no se puede deshacer. Se eliminará permanentemente la
+                                                publicación "{{ pub.nombre }}".
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
@@ -191,15 +254,13 @@ function esDueno(pub: Publicacion): boolean {
                                 </AlertDialog>
                             </template>
 
-                            <!-- Botón para otras empresas -->
                             <template v-else>
-                                <Button size="sm" @click="solicitarIntercambio(pub.idpublicaciones)"
+                                <Button size="sm" @click="abrirModalSolicitud(pub.idpublicaciones)"
                                     class="bg-primary hover:bg-primary/90 text-primary-foreground">
-                                    <ArrowLeftRight class="mr-2 h-4 w-4"/>
+                                    <ArrowLeftRight class="mr-2 h-4 w-4" />
                                     Solicitar Intercambio
                                 </Button>
                             </template>
-
                         </div>
                     </CardContent>
                 </Card>
@@ -207,17 +268,51 @@ function esDueno(pub: Publicacion): boolean {
 
             <Card v-else class="bg-card border-border shadow-none">
                 <CardContent class="text-center text-muted-foreground py-12">
-                    <p class="text-lg">No hay publicaciones registradas todavía.</p>
-                    <p class="text-sm mt-2">¡Crea la primera publicación!</p>
+                    <p class="text-lg">No se encontraron publicaciones.</p>
+                    <p class="text-sm mt-2">Prueba con otra búsqueda.</p>
                 </CardContent>
             </Card>
         </div>
+
+        <Dialog :open="openSolicitudDialog" @update:open="openSolicitudDialog = $event">
+            <DialogContent class="bg-card border-border text-foreground">
+                <DialogHeader>
+                    <DialogTitle>Solicitar Intercambio</DialogTitle>
+                    <DialogDescription class="text-muted-foreground">
+                        Escribe un mensaje para la empresa dueña del material.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="grid gap-4 py-4">
+                    <div class="grid gap-2">
+                        <Label for="mensaje" class="text-muted-foreground">Mensaje</Label>
+                        <Textarea id="mensaje" v-model="solicitudForm.mensaje" rows="4"
+                            placeholder="Hola, estamos interesados en tu material. ¿Lo intercambias por...?"
+                            class="bg-background border-border text-foreground" />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" @click="openSolicitudDialog = false"
+                        class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
+                        Cancelar
+                    </Button>
+                    <Button @click="enviarSolicitud" class="bg-primary hover:bg-primary/90 text-primary-foreground">
+                        Enviar Solicitud
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
     </div>
 </template>
 
 <style>
 @keyframes toast-progress {
-    from { width: 100%; }
-    to { width: 0%; }
+    from {
+        width: 100%;
+    }
+
+    to {
+        width: 0%;
+    }
 }
 </style>

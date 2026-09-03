@@ -11,35 +11,40 @@ use Illuminate\Support\Facades\Auth;
 class PublicacionController extends Controller
 {
     public function index()
-    {
-        $idEmpresa = Auth::user()->idEmpresa;
+{
+    $idEmpresa = Auth::user()->idEmpresa; 
 
-        $publicaciones = Publicacion::with(['empresa', 'categoria'])
-            ->where(function ($query) use ($idEmpresa) {
-                $query->where('idempresa', $idEmpresa)
-                    ->orWhere('estado', 'Disponible');
-            })
-            ->latest('idpublicaciones')
-            ->get()
-            ->map(fn($p) => [
-                'idpublicaciones' => $p->idpublicaciones,
-                'idempresa'       => $p->idempresa,
-                'nombre'          => $p->nombre,
-                'descripcion'     => $p->descripcion,
-                'cantidad'        => $p->cantidad,
-                'unidadMedida'    => $p->unidadMedida,
-                'frecuencia'      => $p->frecuencia,
-                'estado'          => $p->estado,
-                'urlImagen'       => $p->urlImagen,
-                'empresa'         => $p->empresa,
-                'categoria'       => $p->categoria,
-            ]);
-
-        return Inertia::render('Publicaciones/Index', [
-            'publicaciones' => $publicaciones,
-            'empresaAuthId' => $idEmpresa,
+    $publicaciones = Publicacion::with(['empresa', 'categoria'])
+        ->where(function ($query) use ($idEmpresa) {
+            $query->where('idempresa', $idEmpresa)
+                ->orWhere('estado', 'Disponible');
+        })
+        ->latest('idpublicaciones')
+        ->get()
+        ->map(fn($p) => [
+            'idpublicaciones' => $p->idpublicaciones,
+            'idempresa'       => $p->idempresa,
+            'nombre'          => $p->nombre,
+            'descripcion'     => $p->descripcion,
+            'cantidad'        => $p->cantidad,
+            'unidadMedida'    => $p->unidadMedida,
+            'frecuencia'      => $p->frecuencia,
+            'estado'          => $p->estado,
+            'urlImagen'       => $p->urlImagen,
+            'empresa'         => $p->empresa,
+            'categoria'       => $p->categoria,
         ]);
-    }
+
+        $categorias = Categoria::where('idempresa', $idEmpresa)
+            ->orderBy('nombre')
+            ->get();
+
+    return Inertia::render('Publicaciones/Index', [
+        'publicaciones' => $publicaciones,
+        'categorias' => $categorias,
+        'empresaAuthId' => $idEmpresa, 
+    ]);
+}
 
     public function create()
     {
@@ -57,12 +62,12 @@ class PublicacionController extends Controller
 
         $validated = $request->validate([
             'idcategorias' => 'required|integer|exists:categorias,idcategorias',
-            'nombre'       => 'required|string|max:100',
-            'descripcion'  => 'required|string',
-            'cantidad'     => 'required|numeric',
+            'nombre' => 'required|string|max:100',
+            'descripcion' => 'required|string',
+            'cantidad' => 'required|numeric',
             'unidadMedida' => 'required|string',
-            'frecuencia'   => 'required|string',
-            'urlImagen'    => 'required|image|mimes:jpg,png,svg|max:2048',
+            'frecuencia' => 'required|string',
+            'urlImagen' => 'required|image|mimes:jpg,png,svg|max:2048',
         ]);
 
         if ($request->hasFile('urlImagen')) {
@@ -70,8 +75,8 @@ class PublicacionController extends Controller
             $validated['urlImagen'] = '/storage/' . $path;
         }
 
-        $validated['estado']    = 'Pendiente';
-        $validated['idempresa'] = $idEmpresa;
+        $validated['estado'] = 'Pendiente';
+        $validated['idEmpresa'] = $idEmpresa;
 
         Publicacion::create($validated);
 
@@ -82,29 +87,29 @@ class PublicacionController extends Controller
     {
         $idEmpresa = Auth::user()->idEmpresa;
 
-        $publicacion = Publicacion::where('idempresa', $idEmpresa)->findOrFail($id);
-        $categorias  = Categoria::where('idempresa', $idEmpresa)->get();
+        $publicacion = Publicacion::where('idEmpresa', $idEmpresa)->findOrFail($id);
+        $categorias = Categoria::where('idempresa', $idEmpresa)->get();
 
         return Inertia::render('Publicaciones/Edit', [
             'publicacion' => $publicacion,
-            'categorias'  => $categorias
+            'categorias' => $categorias
         ]);
     }
 
     public function update(Request $request, int $id)
     {
-        $idEmpresa   = Auth::user()->idEmpresa;
-        $publicacion = Publicacion::where('idempresa', $idEmpresa)->findOrFail($id);
+        $idEmpresa = Auth::user()->idEmpresa;
+        $publicacion = Publicacion::where('idEmpresa', $idEmpresa)->findOrFail($id);
 
         $validated = $request->validate([
             'idcategorias' => 'required|integer|exists:categorias,idcategorias',
-            'nombre'       => 'required|string|max:100',
-            'descripcion'  => 'required|string',
-            'cantidad'     => 'required|numeric',
+            'nombre' => 'required|string|max:100',
+            'descripcion' => 'required|string',
+            'cantidad' => 'required|numeric',
             'unidadMedida' => 'required|string',
-            'frecuencia'   => 'required|string',
-            'estado'       => 'required|string',
-            'urlImagen'    => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'frecuencia' => 'required|string',
+            'estado' => 'required|string',
+            'urlImagen' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
         if ($request->hasFile('urlImagen')) {
@@ -121,8 +126,8 @@ class PublicacionController extends Controller
 
     public function destroy(int $id)
     {
-        $idEmpresa   = Auth::user()->idEmpresa;
-        $publicacion = Publicacion::where('idempresa', $idEmpresa)->findOrFail($id);
+        $idEmpresa = Auth::user()->idEmpresa;
+        $publicacion = Publicacion::where('idEmpresa', $idEmpresa)->findOrFail($id);
 
         $publicacion->delete();
 

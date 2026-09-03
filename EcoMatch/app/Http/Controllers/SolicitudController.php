@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Publicacion;
 use App\Models\Solicitud;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class SolicitudController extends Controller
@@ -18,14 +20,19 @@ class SolicitudController extends Controller
     {
         $validated = $request->validate([
             'idpublicaciones'  => 'required|integer|exists:publicaciones,idpublicaciones',
-            'idEmpresaOrigen'  => 'required|integer|exists:empresa,idempresa',
-            'idEmpresaDestino' => 'required|integer|exists:empresa,idempresa',
             'mensaje'          => 'required|string',
         ]);
         
-        $validated['estado'] = 'Pendiente'; 
+        $publicacion = Publicacion::findOrFail($validated['idpublicaciones']);
 
-        Solicitud::create($validated);
+        Solicitud::create([
+            'idpublicaciones'  => $publicacion->idpublicaciones,
+            'idEmpresaOrigen'  => Auth::user()->idEmpresa, 
+            'idEmpresaDestino' => $publicacion->idempresa, 
+            'mensaje'          => $validated['mensaje'],
+            'estado'           => 'Pendiente'
+        ]);
+
         return redirect()->back()->with('message', 'Solicitud enviada correctamente');
     }
 

@@ -11,7 +11,7 @@ class Publicacion extends Model
 
     protected $fillable = [
         'idempresa', 'idcategorias', 'nombre', 'descripcion', 'cantidad',
-        'unidadMedida', 'frecuencia', 'estado', 'urlImagen', 'idempresa'
+        'unidadMedida', 'frecuencia', 'estado', 'urlImagen', 
     ];
 
     public function empresa()
