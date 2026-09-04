@@ -2,18 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Publicacion;
 use App\Models\Solicitud;
+use App\Models\Publicacion;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 
 class SolicitudController extends Controller
 {
     public function index()
     {
-        $solicitudes = Solicitud::with(['publicacion.empresa', 'empresaOrigen', 'empresaDestino', 'mensajes'])->get();
-        return Inertia::render('Solicitudes/Index', ['solicitudes' => $solicitudes]);
+        $idEmpresa = Auth::user()->idempresa;
+
+        $solicitudes = Solicitud::with(['publicacion', 'empresaOrigen'])
+            ->where('idEmpresaDestino', $idEmpresa)
+            ->latest('idsolicitud')
+            ->get();
+
+        return Inertia::render('Solicitudes/Index', [
+            'solicitudes' => $solicitudes
+        ]);
     }
 
     public function store(Request $request)
@@ -27,8 +35,8 @@ class SolicitudController extends Controller
 
         Solicitud::create([
             'idpublicaciones'  => $publicacion->idpublicaciones,
-            'idEmpresaOrigen'  => Auth::user()->idEmpresa, 
-            'idEmpresaDestino' => $publicacion->idempresa, 
+            'idEmpresaOrigen'  => Auth::user()->idempresa,
+            'idEmpresaDestino' => $publicacion->idempresa,
             'mensaje'          => $validated['mensaje'],
             'estado'           => 'Pendiente'
         ]);
@@ -39,11 +47,17 @@ class SolicitudController extends Controller
     public function update(Request $request, int $id)
     {
         $solicitud = Solicitud::findOrFail($id);
+        
         $validated = $request->validate([
-            'estado' => 'required|in:Pendiente,Aceptado,Rechazado,Completado',
+            'estado' => 'required|in:Aceptado,Rechazado,Completado',
         ]);
         
         $solicitud->update($validated);
-        return redirect()->back()->with('message', 'Estado de solicitud actualizado correctamente');
+
+        $mensaje = $validated['estado'] == 'Aceptado' 
+            ? 'Solicitud aceptada. Ya puedes contactar a la empresa.' 
+            : 'Solicitud rechazada.';
+
+        return redirect()->back()->with('message', $mensaje);
     }
 }

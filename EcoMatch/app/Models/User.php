@@ -24,6 +24,9 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $two_factor_confirmed_at
  * @property string|null $remember_token
  * @property int|null $current_team_id
+ * @property int|null $idempresa 
+ * @property int|null $idRol
+ * @property int|null $estado
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Team|null $currentTeam
@@ -31,18 +34,13 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, Membership> $teamMemberships
  * @property-read Collection<int, Team> $teams
  */
-#[Fillable(['name', 'email', 'password', 'current_team_id', 'idEmpresa', 'idRol', 'estado'])]
+#[Fillable(['name', 'email', 'password', 'current_team_id', 'idempresa', 'idRol', 'estado'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasTeams, Notifiable;
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -53,7 +51,7 @@ class User extends Authenticatable
 
     public function empresa()
     {
-        return $this->belongsTo(Empresa::class, 'idEmpresa', 'idempresa');
+        return $this->belongsTo(Empresa::class, 'idempresa', 'idempresa');
     }
 
     public function rol()

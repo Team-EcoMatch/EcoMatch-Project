@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
-import { Building } from 'lucide-vue-next';
+import { Building, MapPinned } from 'lucide-vue-next';
 
 const page = usePage();
 
@@ -26,7 +26,7 @@ const dashboardUrl = computed(() =>
     page.props.currentTeam ? dashboard(page.props.currentTeam.slug).url : '/',
 );
 
-const idEmpresa = computed(() => page.props.auth.user.idEmpresa);
+const idEmpresa = computed(() => page.props.auth.user.idempresa);
 console.log(idEmpresa);
 
 const mainNavItems = computed<NavItem[]>(() => [
@@ -49,6 +49,11 @@ const mainNavItems = computed<NavItem[]>(() => [
         title: 'Perfil de Empresa',
         href: `/empresas/${idEmpresa.value}/edit`, 
         icon: Building,
+    },
+    {
+        title: 'Mapa Interactivo',
+        href: '/mapa',
+        icon: MapPinned,
     },
     
 ]);

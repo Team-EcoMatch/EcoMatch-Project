@@ -12,11 +12,10 @@ class CategoriaController extends Controller
 {
     public function index()
     {
-        $idEmpresa = Auth::user()->idEmpresa;
-
+        $idEmpresa = Auth::user()->idempresa;
         $categorias = Categoria::where('idempresa', $idEmpresa)->get();
-
         $message = session('message');
+
         return Inertia::render('Categorias/Index', [
             'categorias' => $categorias,
             'message' => $message
@@ -30,16 +29,14 @@ class CategoriaController extends Controller
 
     public function edit(int $id)
     {
-        $idEmpresa = Auth::user()->idEmpresa;
-        
+        $idEmpresa = Auth::user()->idempresa;
         $categoria = Categoria::where('idempresa', $idEmpresa)->findOrFail($id);
-        
         return Inertia::render('Categorias/Edit', ['categoria' => $categoria]);
     }
 
     public function store(Request $request)
     {
-        $idEmpresa = Auth::user()->idEmpresa;
+        $idEmpresa = Auth::user()->idempresa;
 
         $validated = $request->validate([
             'nombre' => [
@@ -61,7 +58,7 @@ class CategoriaController extends Controller
 
     public function update(Request $request, int $id)
     {
-        $idEmpresa = Auth::user()->idEmpresa;
+        $idEmpresa = Auth::user()->idempresa;
         $categoria = Categoria::where('idempresa', $idEmpresa)->findOrFail($id);
 
         $validated = $request->validate([
@@ -82,9 +79,8 @@ class CategoriaController extends Controller
 
     public function destroy(int $id)
     {
-        $idEmpresa = Auth::user()->idEmpresa;
+        $idEmpresa = Auth::user()->idempresa;
         $categoria = Categoria::where('idempresa', $idEmpresa)->findOrFail($id);
-        
         $categoria->delete();
         return redirect()->route('categorias.index')->with('message', 'Categoría eliminada correctamente.');
     }

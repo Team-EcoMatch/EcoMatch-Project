@@ -53,12 +53,12 @@ interface Categoria {
 
 const props = defineProps<{
     publicaciones: Publicacion[];
-    categorias: Categoria[];
+    categorias: Categoria[]; 
     message: string | null;
 }>();
 
 const page = usePage();
-const currentEmpresaId = page.props.auth.user.idEmpresa;
+const currentEmpresaId = page.props.auth.user.idempresa;
 
 const showNotification = ref(false);
 const notificationMessage = ref(props.message || '');
@@ -66,7 +66,16 @@ const notificationMessage = ref(props.message || '');
 const searchQuery = ref('');
 const selectedCategory = ref('all');
 
+const uniqueCategories = computed(() => {
+    let cats = props.publicaciones.map(p => p.categoria).filter((c): c is { idcategorias: number; nombre: string } => c !== null);
 
+    if (props.categorias) {
+        cats = cats.concat(props.categorias);
+    }
+
+    const unique = Array.from(new Map(cats.map(c => [c.idcategorias, c])).values());
+    return unique.sort((a, b) => a.nombre.localeCompare(b.nombre));
+});
 
 const filteredPublicaciones = computed(() => {
     return props.publicaciones.filter(pub => {
@@ -181,8 +190,7 @@ function esDueno(pub: Publicacion): boolean {
                 <select v-model="selectedCategory"
                     class="h-10 w-full md:w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:ring-primary">
                     <option value="all">Todas las categorías</option>
-
-                    <option v-for="cat in props.categorias" :key="cat.idcategorias" :value="cat.nombre">
+                    <option v-for="cat in uniqueCategories" :key="cat.idcategorias" :value="cat.nombre">
                         {{ cat.nombre }}
                     </option>
                 </select>
