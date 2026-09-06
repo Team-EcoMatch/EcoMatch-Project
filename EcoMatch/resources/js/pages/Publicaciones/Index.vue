@@ -53,12 +53,13 @@ interface Categoria {
 
 const props = defineProps<{
     publicaciones: Publicacion[];
-    categorias: Categoria[]; 
+    categorias: Categoria[];
     message: string | null;
 }>();
 
 const page = usePage();
 const currentEmpresaId = page.props.auth.user.idempresa;
+const userRol = page.props.auth.user.rol;
 
 const showNotification = ref(false);
 const notificationMessage = ref(props.message || '');
@@ -223,7 +224,7 @@ function esDueno(pub: Publicacion): boolean {
                         </div>
 
                         <div class="flex justify-end gap-2 border-t border-border pt-4">
-                            <template v-if="esDueno(pub)">
+                            <template v-if="esDueno(pub) && userRol === 'Jefe'">
                                 <Link :href="`/publicaciones/${pub.idpublicaciones}/edit`">
                                     <Button size="sm" variant="outline"
                                         class="border-primary text-primary hover:bg-accent hover:text-primary">
@@ -233,33 +234,12 @@ function esDueno(pub: Publicacion): boolean {
                                 </Link>
 
                                 <AlertDialog>
-                                    <AlertDialogTrigger as-child>
-                                        <Button size="sm" variant="destructive"
-                                            class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                            <Trash2 class="mr-2 h-4 w-4" />
-                                            Eliminar
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent class="bg-card border-border text-foreground">
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
-                                            <AlertDialogDescription class="text-muted-foreground">
-                                                Esta acción no se puede deshacer. Se eliminará permanentemente la
-                                                publicación "{{ pub.nombre }}".
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel
-                                                class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
-                                                Cancelar
-                                            </AlertDialogCancel>
-                                            <AlertDialogAction @click="deletePublicacion(pub.idpublicaciones)"
-                                                class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                                Sí, eliminar
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
                                 </AlertDialog>
+                            </template>
+
+                            <template v-else-if="esDueno(pub) && userRol === 'Empresa'">
+                                <span class="text-xs text-muted-foreground italic self-center">Pendiente de
+                                    aprobación</span>
                             </template>
 
                             <template v-else>
