@@ -10,13 +10,13 @@ class Rol extends Model
     protected $primaryKey = 'idroles';
 
     protected $fillable = [
-        'tipo', 'empresa_idempresa'
+        'tipo', 'idempresa'
     ];
 
 
     public function empresa()
     {
-        return $this->belongsTo(Empresa::class, 'empresa_idempresa');
+        return $this->belongsTo(Empresa::class, 'idempresa');
     }
 
     public function usuarios()

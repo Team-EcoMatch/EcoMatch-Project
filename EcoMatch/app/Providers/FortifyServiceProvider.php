@@ -23,6 +23,21 @@ class FortifyServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(LoginResponseContract::class, LoginResponse::class);
+
+        $this->app->singleton(
+            \Laravel\Fortify\Contracts\RegisterResponse::class,
+            \App\Http\Responses\RegisterResponse::class
+        );
+        
+        $this->app->bind(
+            \Laravel\Fortify\Contracts\CreatesNewUsers::class,
+            \App\Actions\Fortify\CreateNewUser::class
+        );
+
+        $this->app->singleton(
+            \Laravel\Fortify\Contracts\LogoutResponse::class,
+            \App\Http\Responses\LogoutResponse::class
+        );
     }
 
     /**
@@ -33,6 +48,14 @@ class FortifyServiceProvider extends ServiceProvider
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();
+
+        Fortify::loginView(function () {
+            return Inertia::render('auth/Login');
+        });
+
+        Fortify::registerView(function () {
+            return Inertia::render('auth/Register');
+        });
     }
 
     /**
