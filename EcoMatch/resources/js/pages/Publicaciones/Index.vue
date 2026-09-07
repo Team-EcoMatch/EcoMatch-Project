@@ -229,11 +229,37 @@ function esDueno(pub: Publicacion): boolean {
                                     <Button size="sm" variant="outline"
                                         class="border-primary text-primary hover:bg-accent hover:text-primary">
                                         <Pencil class="mr-2 h-4 w-4" />
-                                        Editar
+                                        <span>Editar</span>
                                     </Button>
                                 </Link>
 
                                 <AlertDialog>
+                                    <AlertDialogTrigger as-child>
+                                        <Button size="sm" variant="destructive"
+                                            class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                            <Trash2 class="mr-2 h-4 w-4" />
+                                            <span>Eliminar</span>
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent class="bg-card border-border text-foreground">
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+                                            <AlertDialogDescription class="text-muted-foreground">
+                                                Esta acción no se puede deshacer. Se eliminará permanentemente la
+                                                publicación "{{ pub.nombre }}".
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel
+                                                class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
+                                                Cancelar
+                                            </AlertDialogCancel>
+                                            <AlertDialogAction @click="deletePublicacion(pub.idpublicaciones)"
+                                                class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                                Sí, eliminar
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
                                 </AlertDialog>
                             </template>
 
