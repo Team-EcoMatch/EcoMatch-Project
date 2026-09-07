@@ -2,37 +2,48 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\TeamInvitation;
+use App\Models\Publicacion;
+use App\Models\Solicitud;
+use App\Models\User;
+use App\Models\Categoria;
+use App\Models\Rol;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Inertia\Response;
+use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request)
     {
-        $email = strtolower($request->user()->email);
+        $idEmpresa = Auth::user()->idempresa;
+        $idUsuario = Auth::id();
 
-        $pendingInvitations = TeamInvitation::query()
-            ->with(['inviter', 'team'])
-            ->whereRaw('LOWER(email) = ?', [$email])
-            ->whereNull('accepted_at')
-            ->where(fn ($query) => $query
-                ->whereNull('expires_at')
-                ->orWhere('expires_at', '>=', now()))
-            ->latest()
-            ->get()
-            ->map(fn (TeamInvitation $invitation) => [
-                'code' => $invitation->code,
-                'inviterName' => $invitation->inviter->name,
-                'team' => [
-                    'name' => $invitation->team->name,
-                    'slug' => $invitation->team->slug,
-                ],
-            ]);
+        $publicacionesActivas = Publicacion::where('idempresa', $idEmpresa)->where('estado', 'Disponible')->count();
+        $publicacionesPendientes = Publicacion::where('idempresa', $idEmpresa)->where('estado', 'Pendiente')->count();
+        $solicitudesPendientes = Solicitud::where('idEmpresaDestino', $idEmpresa)->where('estado', 'Pendiente')->count();
+        $mercadoTotal = Publicacion::where('estado', 'Disponible')->count();
+        $totalCategorias = Categoria::where('idempresa', $idEmpresa)->count();
+        
+        $rolEmpleado = Rol::where('idempresa', $idEmpresa)->where('tipo', 'Empresa')->first();
+        $totalEmpleados = 0;
+        if ($rolEmpleado) {
+            $totalEmpleados = User::where('idempresa', $idEmpresa)->where('idRol', $rolEmpleado->idroles)->count();
+        }
+
+        $misSolicitudesEnviadas = Solicitud::where('idEmpresaOrigen', $idEmpresa)->where('estado', 'Pendiente')->count();
+        $misPublicacionesTotales = Publicacion::where('idempresa', $idEmpresa)->count();
 
         return Inertia::render('Dashboard', [
-            'pendingInvitations' => $pendingInvitations,
+            'stats' => [
+                'activas' => $publicacionesActivas,
+                'pendientes' => $publicacionesPendientes,
+                'solicitudes' => $solicitudesPendientes,
+                'mercado' => $mercadoTotal,
+                'empleados' => $totalEmpleados,
+                'categorias' => $totalCategorias,
+                'misSolicitudes' => $misSolicitudesEnviadas,
+                'misPublicaciones' => $misPublicacionesTotales,
+            ]
         ]);
     }
 }

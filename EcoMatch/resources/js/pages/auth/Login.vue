@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Leaf, Recycle, ArrowRight, Eye, EyeOff, CheckCircle2, X } from 'lucide-vue-next';
+import { Loader2, Leaf, Recycle, ArrowRight, Eye, EyeOff, CheckCircle2, X, ArrowLeft } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
 defineProps<{
@@ -41,20 +41,24 @@ const submit = () => {
 </script>
 
 <template>
+
     <Head title="Iniciar Sesión" />
 
     <div class="fixed inset-0 z-50 bg-background text-foreground overflow-auto">
         <div class="grid min-h-full w-full lg:grid-cols-2">
 
-            <section class="relative hidden min-h-screen overflow-hidden bg-background lg:flex lg:flex-col lg:justify-between">
+            <section
+                class="relative hidden min-h-screen overflow-hidden bg-background lg:flex lg:flex-col lg:justify-between">
                 <div class="absolute -left-32 top-1/4 h-96 w-96 rounded-full bg-primary/10 blur-[120px]"></div>
-                <div class="absolute -right-20 bottom-0 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[140px]"></div>
+                <div class="absolute -right-20 bottom-0 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[140px]">
+                </div>
                 <div class="absolute right-20 top-20 h-32 w-32 rounded-full border border-primary/10"></div>
                 <div class="absolute right-32 top-32 h-16 w-16 rounded-full border border-primary/10"></div>
 
                 <div class="relative z-10 flex min-h-screen flex-col justify-between p-12 xl:p-16">
                     <div class="flex items-center gap-3">
-                        <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
+                        <div
+                            class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
                             <Leaf class="h-6 w-6 text-primary" />
                         </div>
                         <div>
@@ -64,7 +68,8 @@ const submit = () => {
                     </div>
 
                     <div class="max-w-xl">
-                        <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-sm text-primary">
+                        <div
+                            class="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-sm text-primary">
                             <Recycle class="h-4 w-4" />
                             Conectando empresas
                         </div>
@@ -75,7 +80,8 @@ const submit = () => {
                         </h1>
 
                         <p class="mt-7 max-w-lg text-lg leading-8 text-muted-foreground">
-                            Intercambia materiales, reduce residuos y maximiza el valor de tus recursos mediante nuestra plataforma de economía circular.
+                            Intercambia materiales, reduce residuos y maximiza el valor de tus recursos mediante nuestra
+                            plataforma de economía circular.
                         </p>
 
                         <div class="mt-10 grid grid-cols-3 gap-6">
@@ -100,7 +106,8 @@ const submit = () => {
                 </div>
             </section>
 
-            <section class="relative flex min-h-screen items-center justify-center overflow-hidden bg-muted/20 px-6 py-10 sm:px-10">
+            <section
+                class="relative flex min-h-screen items-center justify-center overflow-hidden bg-muted/20 px-6 py-10 sm:px-10">
                 <div class="absolute right-0 top-0 h-96 w-96 rounded-full bg-primary/5 blur-[100px]"></div>
                 <div class="absolute bottom-0 left-0 h-72 w-72 rounded-full bg-primary/5 blur-[100px]"></div>
 
@@ -111,22 +118,33 @@ const submit = () => {
                     <span class="text-xl font-bold">EcoMatch</span>
                 </div>
 
+                <div class="absolute top-6 right-6 z-20">
+                    <Link href="/"
+                        class="group inline-flex items-center gap-2 px-4 py-2 bg-card/60 backdrop-blur-md border border-border/60 rounded-full shadow-lg text-sm font-medium text-foreground hover:bg-card/90 hover:border-primary/50 hover:text-primary transition-all duration-300">
+                        <ArrowLeft class="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+                        Inicio
+                    </Link>
+                </div>
+
                 <Transition enter-active-class="transition-all duration-300 ease-out"
                     enter-from-class="opacity-0 translate-y-[-10px] scale-95"
                     enter-to-class="opacity-100 translate-y-0 scale-100"
                     leave-active-class="transition-all duration-300 ease-in"
                     leave-from-class="opacity-100 translate-y-0 scale-100"
                     leave-to-class="opacity-0 translate-y-[-10px] scale-95">
-                    <div v-if="showNotification" class="fixed top-6 right-6 z-[9999] w-[360px] rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
+                    <div v-if="showNotification"
+                        class="fixed top-6 right-6 z-[9999] w-[360px] rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
                         <div class="flex items-start gap-3 p-4">
-                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-500/10">
+                            <div
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-500/10">
                                 <CheckCircle2 class="h-5 w-5 text-green-500" />
                             </div>
                             <div class="flex-1 min-w-0">
                                 <p class="font-semibold text-foreground">Acción completada</p>
                                 <p class="mt-1 text-sm text-muted-foreground">{{ notificationMessage }}</p>
                             </div>
-                            <button type="button" @click="showNotification = false" class="text-muted-foreground hover:text-foreground transition-colors">
+                            <button type="button" @click="showNotification = false"
+                                class="text-muted-foreground hover:text-foreground transition-colors">
                                 <X class="h-4 w-4" />
                             </button>
                         </div>
@@ -137,7 +155,8 @@ const submit = () => {
                 </Transition>
 
                 <div class="relative z-10 w-full max-w-md">
-                    <div class="rounded-2xl border border-border bg-card/90 p-7 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-9">
+                    <div
+                        class="rounded-2xl border border-border bg-card/90 p-7 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-9">
 
                         <div class="mb-8">
                             <div class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
@@ -174,8 +193,9 @@ const submit = () => {
                                     </Link>
                                 </div>
                                 <div class="relative">
-                                    <Input id="password" :type="showPassword ? 'text' : 'password'" v-model="form.password" required
-                                        autocomplete="current-password" placeholder="••••••••"
+                                    <Input id="password" :type="showPassword ? 'text' : 'password'"
+                                        v-model="form.password" required autocomplete="current-password"
+                                        placeholder="••••••••"
                                         class="h-12 rounded-lg border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring pr-10" />
                                     <button type="button" @click="showPassword = !showPassword"
                                         class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
@@ -195,8 +215,7 @@ const submit = () => {
                                 </Label>
                             </div>
 
-                            <Button type="submit"
-                                class="h-12 w-full rounded-lg shadow-lg transition-all duration-200"
+                            <Button type="submit" class="h-12 w-full rounded-lg shadow-lg transition-all duration-200"
                                 :disabled="form.processing">
                                 <Loader2 v-if="form.processing" class="mr-2 h-4 w-4 animate-spin" />
                                 <span>{{ form.processing ? 'Ingresando...' : 'Ingresar' }}</span>
@@ -207,7 +226,8 @@ const submit = () => {
 
                         <div class="mt-7 border-t border-border pt-6 text-center">
                             <p class="text-sm text-muted-foreground">¿No tienes una cuenta?</p>
-                            <Link href="/register" class="mt-1 inline-block text-sm font-medium text-primary hover:underline">
+                            <Link href="/register"
+                                class="mt-1 inline-block text-sm font-medium text-primary hover:underline">
                                 Registra tu empresa aquí
                             </Link>
                         </div>
@@ -226,7 +246,12 @@ const submit = () => {
 
 <style>
 @keyframes toast-progress {
-    from { width: 100%; }
-    to { width: 0%; }
+    from {
+        width: 100%;
+    }
+
+    to {
+        width: 0%;
+    }
 }
 </style>
