@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminPublicacionController;
 use App\Http\Controllers\EmpleadoController;
 
-// Arreglado: Si el usuario está logueado, lo manda a su dashboard, si no, muestra el Welcome
 Route::get('/', function () {
     if (Auth::check() && Auth::user()->currentTeam) {
         return redirect()->route('dashboard', ['current_team' => Auth::user()->currentTeam->slug]);
@@ -67,7 +66,7 @@ Route::middleware(['auth', 'verified', 'role:Jefe'])->group(function () {
     // Aprobar Publicaciones
     Route::post('/publicaciones/{id}/approve', [PublicacionController::class, 'approve'])->name('publicaciones.approve');
 
-    // Perfil de Empresa
+    //perfil de empresas
     Route::get('/empresas/{id}/edit', [EmpresaController::class, 'edit'])->name('empresas.edit');
     Route::put('/empresas/{id}', [EmpresaController::class, 'update'])->name('empresas.update');
     Route::get('/empresas/{id}', [EmpresaController::class, 'show'])->name('empresas.show');

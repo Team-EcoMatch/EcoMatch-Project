@@ -35,6 +35,6 @@ class Empresa extends Model
 
     public function users()
     {
-        return $this->hasMany(User::class, 'idEmpresa', 'idempresa');
+        return $this->hasMany(User::class, 'idempresa', 'idempresa');
     }
 }

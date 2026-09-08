@@ -10,13 +10,17 @@ class Solicitud extends Model
     protected $primaryKey = 'idsolicitud';
 
     protected $fillable = [
-        'idpublicaciones', 'idEmpresaOrigen', 'idEmpresaDestino',
-        'mensaje', 'estado', 'publicaciones_idpublicaciones'
+        'idpublicaciones',
+        'idEmpresaOrigen',
+        'idEmpresaDestino',
+        'mensaje',
+        'cantidad',
+        'estado'
     ];
 
     public function publicacion()
     {
-        return $this->belongsTo(Publicacion::class, 'publicaciones_idpublicaciones');
+        return $this->belongsTo(Publicacion::class, 'idpublicaciones', 'idpublicaciones');
     }
 
     public function mensajes()
@@ -33,5 +37,4 @@ class Solicitud extends Model
     {
         return $this->belongsTo(Empresa::class, 'idEmpresaDestino', 'idempresa');
     }
-
 }
