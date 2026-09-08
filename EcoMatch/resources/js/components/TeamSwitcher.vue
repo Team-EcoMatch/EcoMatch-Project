@@ -55,7 +55,6 @@ const switchTeam = (team: Team) => {
         onFinish: () => {
             if (!previousTeamSlug || typeof window === 'undefined') {
                 router.reload();
-
                 return;
             }
 
@@ -66,7 +65,6 @@ const switchTeam = (team: Team) => {
                 router.visit(currentUrl.replace(segment, `/${team.slug}`), {
                     replace: true,
                 });
-
                 return;
             }
 
@@ -84,83 +82,53 @@ onMounted(() => {
 onUnmounted(() => {
     mediaQuery?.removeEventListener('change', updateIsMobile);
 });
+
+const nombreEmpresa = computed(() => page.props.auth.user?.nombreEmpresa || 'Mi Empresa');
 </script>
 
 <template>
     <DropdownMenu>
         <DropdownMenuTrigger as-child>
-            <Button
-                data-test="team-switcher-trigger"
-                variant="ghost"
-                :class="
-                    props.inHeader
-                        ? 'h-8 gap-1 px-2'
-                        : 'w-full justify-start px-2 has-[>svg]:px-2 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
-                "
-            >
-                <Users
-                    :class="
-                        props.inHeader
-                            ? 'hidden'
-                            : 'hidden size-4 shrink-0 group-data-[collapsible=icon]:block'
-                    "
-                />
-                <div
-                    :class="
-                        props.inHeader
-                            ? 'grid flex-1 text-left text-sm leading-tight'
-                            : 'grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden'
-                    "
-                >
-                    <span
-                        :class="
-                            props.inHeader
-                                ? 'max-w-[120px] truncate font-medium'
-                                : 'truncate font-semibold'
-                        "
-                    >
-                        {{ currentTeam?.name ?? 'Select team' }}
+            <Button data-test="team-switcher-trigger" variant="ghost" :class="props.inHeader
+                    ? 'h-8 gap-1 px-2'
+                    : 'w-full justify-start px-2 has-[>svg]:px-2 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
+                ">
+                <Users :class="props.inHeader
+                        ? 'hidden'
+                        : 'hidden size-4 shrink-0 group-data-[collapsible=icon]:block'
+                    " />
+                <div :class="props.inHeader
+                        ? 'grid flex-1 text-left text-sm leading-tight'
+                        : 'grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden'
+                    ">
+                    <span :class="props.inHeader
+                            ? 'max-w-[120px] truncate font-medium'
+                            : 'truncate font-semibold'
+                        ">
+                        {{ nombreEmpresa }}
                     </span>
                 </div>
-                <ChevronsUpDown
-                    :class="
-                        props.inHeader
-                            ? 'size-4 opacity-50'
-                            : 'ml-auto group-data-[collapsible=icon]:hidden'
-                    "
-                />
+                <ChevronsUpDown :class="props.inHeader
+                        ? 'size-4 opacity-50'
+                        : 'ml-auto group-data-[collapsible=icon]:hidden'
+                    " />
             </Button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent
-            :class="menuContentClass"
-            :side="props.inHeader ? undefined : isMobile ? 'bottom' : 'right'"
-            :align="props.inHeader ? 'end' : 'start'"
-            :side-offset="props.inHeader ? undefined : 4"
-        >
+        <DropdownMenuContent :class="menuContentClass"
+            :side="props.inHeader ? undefined : isMobile ? 'bottom' : 'right'" :align="props.inHeader ? 'end' : 'start'"
+            :side-offset="props.inHeader ? undefined : 4">
             <DropdownMenuLabel class="text-xs text-muted-foreground">
                 Teams
             </DropdownMenuLabel>
-            <DropdownMenuItem
-                v-for="team in teams"
-                :key="team.id"
-                data-test="team-switcher-item"
-                :class="teamItemClass"
-                @click="switchTeam(team)"
-            >
+            <DropdownMenuItem v-for="team in teams" :key="team.id" data-test="team-switcher-item" :class="teamItemClass"
+                @click="switchTeam(team)">
                 {{ team.name }}
-                <Check
-                    v-if="currentTeam?.id === team.id"
-                    :class="checkIconClass"
-                />
+                <Check v-if="currentTeam?.id === team.id" :class="checkIconClass" />
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <CreateTeamModal>
-                <DropdownMenuItem
-                    data-test="team-switcher-new-team"
-                    :class="teamItemClass"
-                    @select.prevent
-                >
+                <DropdownMenuItem data-test="team-switcher-new-team" :class="teamItemClass" @select.prevent>
                     <Plus :class="plusIconClass" />
                     <span class="text-muted-foreground">New team</span>
                 </DropdownMenuItem>

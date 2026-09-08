@@ -1,44 +1,24 @@
 <script setup lang="ts">
+import { usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useInitials } from '@/composables/useInitials';
-import type { Team, User } from '@/types';
 
-type Props = {
-    user: User;
-    showEmail?: boolean;
-    team?: Team | null;
-};
+const page = usePage();
+const user = page.props.auth.user;
 
-const props = withDefaults(defineProps<Props>(), {
-    showEmail: false,
-    team: null,
-});
-
-const { getInitials } = useInitials();
-
-const showAvatar = computed(
-    () => props.user.avatar && props.user.avatar !== '',
-);
+const nombreEmpresa = computed(() => page.props.auth.user?.nombreEmpresa || 'Mi Empresa');
 </script>
 
 <template>
-    <Avatar class="h-8 w-8 overflow-hidden rounded-lg">
-        <AvatarImage v-if="showAvatar" :src="user.avatar!" :alt="user.name" />
-        <AvatarFallback class="rounded-lg text-black dark:text-white">
-            {{ getInitials(user.name) }}
-        </AvatarFallback>
-    </Avatar>
-
-    <div class="grid flex-1 text-left text-sm leading-tight">
-        <span class="truncate font-medium">{{ user.name }}</span>
-        <span v-if="team" class="truncate text-xs text-muted-foreground">{{
-            team.name
-        }}</span>
-        <span
-            v-else-if="showEmail"
-            class="truncate text-xs text-muted-foreground"
-            >{{ user.email }}</span
-        >
+    <div class="flex items-center gap-2 overflow-hidden">
+        <img v-if="user?.profile_photo_url" :src="user.profile_photo_url as any" :alt="user?.name"
+            class="rounded-full size-8 object-cover">
+        <div v-else
+            class="flex items-center justify-center size-8 rounded-full bg-primary/10 text-primary font-semibold">
+            {{ user?.name?.charAt(0).toUpperCase() }}
+        </div>
+        <div class="grid flex-1 text-left text-sm leading-tight">
+            <span class="truncate font-semibold">{{ user?.name }}</span>
+            <span class="truncate text-xs text-muted-foreground">{{ nombreEmpresa }}</span>
+        </div>
     </div>
 </template>

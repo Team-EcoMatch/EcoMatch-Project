@@ -23,7 +23,8 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $user ? array_merge($user->only(['id', 'name', 'email', 'current_team_id', 'idempresa']), [
-                    'rol' => $user->rol ? $user->rol->tipo : null
+                    'rol' => $user->rol ? $user->rol->tipo : null,
+                    'nombreEmpresa' => $user->empresa ? $user->empresa->nombreEmpresa : null
                 ]) : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
