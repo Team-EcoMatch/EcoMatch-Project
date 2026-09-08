@@ -3,6 +3,10 @@ import { Head, Link, usePage } from '@inertiajs/vue3';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PackageCheck, Clock, Inbox, ArrowRight, Leaf, Users, MapPinned, Globe2, Tags, Send, Layers } from 'lucide-vue-next';
+import { Bar, Line } from 'vue-chartjs';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 defineProps<{
     stats: {
@@ -14,11 +18,57 @@ defineProps<{
         categorias: number;
         misSolicitudes: number;
         misPublicaciones: number;
-    }
+    };
+    charts: {
+        categorias: {
+            labels: string[];
+            data: number[];
+        };
+        dias: {
+            labels: string[];
+            data: number[];
+        };
+    };
 }>();
 
 const page = usePage();
 const userRol = page.props.auth.user.rol;
+
+const barChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { display: false },
+    },
+    scales: {
+        y: { 
+            grid: { color: 'rgba(148, 163, 184, 0.1)' }, 
+            ticks: { color: '#94A3B8' } 
+        },
+        x: { 
+            grid: { display: false }, 
+            ticks: { color: '#94A3B8' } 
+        }
+    }
+};
+
+const lineChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { display: false },
+    },
+    scales: {
+        y: { 
+            grid: { color: 'rgba(148, 163, 184, 0.1)' }, 
+            ticks: { color: '#94A3B8' } 
+        },
+        x: { 
+            grid: { display: false }, 
+            ticks: { color: '#94A3B8' } 
+        }
+    }
+};
 </script>
 
 <template>
@@ -90,6 +140,58 @@ const userRol = page.props.auth.user.rol;
                     <CardContent>
                         <div class="text-4xl font-bold text-foreground">{{ stats.mercado }}</div>
                         <p class="text-xs text-muted-foreground mt-1">Materiales disponibles en la plataforma</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+                <Card class="bg-card border-border shadow-sm hover:shadow-md transition-all">
+                    <CardHeader>
+                        <CardTitle class="text-lg">Materiales por Categoría</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div class="h-72 w-full">
+                            <Bar 
+                                :data="{
+                                    labels: charts.categorias.labels,
+                                    datasets: [{
+                                        label: 'Materiales',
+                                        data: charts.categorias.data,
+                                        backgroundColor: '#10B981',
+                                        borderRadius: 6,
+                                        barThickness: 'flex',
+                                        maxBarThickness: 40
+                                    }]
+                                }" 
+                                :options="barChartOptions" 
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card class="bg-card border-border shadow-sm hover:shadow-md transition-all">
+                    <CardHeader>
+                        <CardTitle class="text-lg">Publicaciones (Últimos 7 días)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div class="h-72 w-full">
+                            <Line 
+                                :data="{
+                                    labels: charts.dias.labels,
+                                    datasets: [{
+                                        label: 'Publicaciones',
+                                        data: charts.dias.data,
+                                        borderColor: '#3B82F6',
+                                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                        fill: true,
+                                        tension: 0.4,
+                                        pointRadius: 4,
+                                        pointBackgroundColor: '#3B82F6'
+                                    }]
+                                }" 
+                                :options="lineChartOptions" 
+                            />
+                        </div>
                     </CardContent>
                 </Card>
             </div>
