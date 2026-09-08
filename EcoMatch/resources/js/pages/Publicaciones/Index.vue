@@ -115,7 +115,8 @@ function deletePublicacion(id: number) {
 
 const solicitudForm = useForm({
     idpublicaciones: null as number | null,
-    mensaje: ''
+    mensaje: '',
+    cantidad: '', // nuevo
 });
 
 const openSolicitudDialog = ref(false);
@@ -341,6 +342,7 @@ function esDueno(pub: Publicacion): boolean {
                         Escribe un mensaje para la empresa dueña del material.
                     </DialogDescription>
                 </DialogHeader>
+
                 <div class="grid gap-4 py-4">
                     <div class="grid gap-2">
                         <Label for="mensaje" class="text-muted-foreground">Mensaje</Label>
@@ -348,6 +350,12 @@ function esDueno(pub: Publicacion): boolean {
                             placeholder="Hola, estamos interesados en tu material. ¿Lo intercambias por...?"
                             class="bg-background border-border text-foreground" />
                     </div>
+                </div>
+                <div class="grid gap-2">
+                    <Label for="cantidad" class="text-muted-foreground">Cantidad a solicitar</Label>
+                    <Input id="cantidad" v-model="solicitudForm.cantidad" type="number" step="0.01" min="0.01"
+                        placeholder="Ingresa la cantidad que deseas solicitar"
+                        class="bg-background border-border text-foreground" />
                 </div>
                 <DialogFooter>
                     <Button variant="outline" @click="openSolicitudDialog = false"
