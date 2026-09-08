@@ -12,15 +12,30 @@ class SolicitudController extends Controller
 {
     public function index()
     {
-        $idEmpresa = Auth::user()->idempresa;
+        $empresaId = Auth::user()->idEmpresa;
+        //solictudes de la empresa de destino
+        $recibidas = Solicitud::with([
+            'publicacion',
+            'publicacion.empresa',
+            'empresaOrigen'
+        ])
+            ->where('idEmpresaDestino', $empresaId)
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-        $solicitudes = Solicitud::with(['publicacion', 'empresaOrigen'])
-            ->where('idEmpresaDestino', $idEmpresa)
-            ->latest('idsolicitud')
+        //solicitudes de la empresa de origen
+        $enviadas = Solicitud::with([
+            'publicacion',
+            'publicacion.empresa',
+            'empresaDestino'
+        ])
+            ->where('idEmpresaOrigen', $empresaId)
+            ->orderBy('created_at', 'desc')
             ->get();
 
         return Inertia::render('Solicitudes/Index', [
-            'solicitudes' => $solicitudes
+            'recibidas' => $recibidas,
+            'enviadas'  => $enviadas,
         ]);
     }
 
@@ -30,12 +45,27 @@ class SolicitudController extends Controller
             'idpublicaciones'  => 'required|integer|exists:publicaciones,idpublicaciones',
             'mensaje'          => 'required|string',
         ]);
-        
+
         $publicacion = Publicacion::findOrFail($validated['idpublicaciones']);
+        $empresaOrigen = Auth::user()->idEmpresa;
+
+        
+        //no permite solicitar un material propio
+        if ($empresaOrigen === $publicacion->idempresa) {
+            return redirect()->back()->withErrors([
+                'error' => 'No puede solicitar un materia propio'
+            ]);
+        }
+
+        //verificar que no exista una solicitud pendiente duplicada
+        $existe = Solicitud::where('idpublicaciones', $publicacion->idpublicaciones)
+        ->where('idEmpresaOrigen', $empresaOrigen)
+        ->where('estado', 'Pendiente')
+        ->exists();
 
         Solicitud::create([
             'idpublicaciones'  => $publicacion->idpublicaciones,
-            'idEmpresaOrigen'  => Auth::user()->idempresa,
+            'idEmpresaOrigen'  => Auth::user()->idEmpresa,
             'idEmpresaDestino' => $publicacion->idempresa,
             'mensaje'          => $validated['mensaje'],
             'estado'           => 'Pendiente'
@@ -47,11 +77,16 @@ class SolicitudController extends Controller
     public function update(Request $request, int $id)
     {
         $solicitud = Solicitud::findOrFail($id);
-        
+
+        $empresaId = Auth::user()->idEmpresa;
+        if ($empresaId !== $solicitud->idEmpresaDestino) {
+            abort(403, 'No tiene permiso para modificar esta solicitud.');
+        }
+
         $validated = $request->validate([
             'estado' => 'required|in:Aceptado,Rechazado,Completado',
         ]);
-        
+
         $solicitud->update($validated);
 
         $mensaje = $validated['estado'] == 'Aceptado' 

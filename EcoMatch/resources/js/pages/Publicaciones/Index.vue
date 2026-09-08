@@ -64,6 +64,9 @@ const userRol = page.props.auth.user.rol;
 const showNotification = ref(false);
 const notificationMessage = ref(props.message || '');
 
+const showConfirmDialog = ref(false);
+const solicitudPendiente = ref<{ id: number; mensaje: string } | null>(null);
+
 const searchQuery = ref('');
 const selectedCategory = ref('all');
 
@@ -123,17 +126,38 @@ function abrirModalSolicitud(id: number) {
     openSolicitudDialog.value = true;
 }
 
+//modificado para enviar solicitud directamente
 function enviarSolicitud() {
+    if (!solicitudForm.mensaje?.trim()) {
+        triggerNotification('Escriba un mensaje');
+        return;
+    }
+    solicitudPendiente.value = {
+        id: solicitudForm.idpublicaciones!,
+        mensaje: solicitudForm.mensaje
+    };
+
+    openSolicitudDialog.value = false;
+    showConfirmDialog.value = true;
+}
+
+function confirmarEnvio() {
+    if (!solicitudPendiente.value) return;
+
     solicitudForm.post('/solicitudes', {
         preserveScroll: true,
         onSuccess: (page) => {
-            openSolicitudDialog.value = false;
+            showConfirmDialog.value = false;
+            solicitudPendiente.value = null;
             const msg = (page.props.message as string) || 'Solicitud enviada correctamente.';
             triggerNotification(msg);
+        },
+        onError: (errors) => {
+            const errorMsg = Object.values(errors).flat().join('\n');
+            triggerNotification('Error: ' + errorMsg);
         }
     });
 }
-
 function esDueno(pub: Publicacion): boolean {
     return pub.idempresa === currentEmpresaId;
 }
@@ -234,6 +258,27 @@ function esDueno(pub: Publicacion): boolean {
                                 </Link>
 
                                 <AlertDialog>
+                                </AlertDialog>
+                                <!-- AlertDialog de confirmación -->
+                                <AlertDialog :open="showConfirmDialog" @update:open="showConfirmDialog = $event">
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Confirmar solicitud</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                ¿Estás seguro de enviar esta solicitud de intercambio?
+                                                <br><br>
+                                                <strong>Mensaje:</strong> {{ solicitudPendiente?.mensaje }}
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel @click="showConfirmDialog = false">Cancelar
+                                            </AlertDialogCancel>
+                                            <AlertDialogAction @click="confirmarEnvio"
+                                                class="bg-primary hover:bg-primary/90">
+                                                Sí, enviar solicitud
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
                                 </AlertDialog>
                             </template>
 
