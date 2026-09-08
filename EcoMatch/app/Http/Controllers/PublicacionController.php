@@ -41,7 +41,7 @@ class PublicacionController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+        public function store(Request $request)
     {
         $idEmpresa = Auth::user()->idempresa;
 
@@ -60,12 +60,18 @@ class PublicacionController extends Controller
             $validated['urlImagen'] = '/storage/' . $path;
         }
 
-        $validated['estado'] = 'Pendiente';
+        $esJefe = Auth::user()->rol->tipo === 'Jefe';
+        $validated['estado'] = $esJefe ? 'Disponible' : 'Pendiente';
+        
         $validated['idempresa'] = $idEmpresa;
 
         Publicacion::create($validated);
 
-        return redirect()->route('publicaciones.index')->with('message', 'Publicación enviada a aprobación.');
+        $mensaje = $esJefe 
+            ? 'Publicación creada y disponible exitosamente.' 
+            : 'Publicación enviada a aprobación.';
+
+        return redirect()->route('publicaciones.index')->with('message', $mensaje);
     }
 
     public function edit(int $id)
