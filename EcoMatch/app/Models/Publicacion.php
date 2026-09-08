@@ -16,7 +16,7 @@ class Publicacion extends Model
 
     public function empresa()
     {
-        return $this->belongsTo(Empresa::class, 'idempresa');
+        return $this->belongsTo(Empresa::class, 'idempresa', 'idempresa');
     }
 
     public function categoria()

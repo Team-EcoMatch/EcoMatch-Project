@@ -64,6 +64,9 @@ const userRol = page.props.auth.user.rol;
 const showNotification = ref(false);
 const notificationMessage = ref(props.message || '');
 
+const showConfirmDialog = ref(false);
+const solicitudPendiente = ref<{ id: number; mensaje: string } | null>(null);
+
 const searchQuery = ref('');
 const selectedCategory = ref('all');
 
@@ -112,7 +115,8 @@ function deletePublicacion(id: number) {
 
 const solicitudForm = useForm({
     idpublicaciones: null as number | null,
-    mensaje: ''
+    mensaje: '',
+    cantidad: '', // nuevo
 });
 
 const openSolicitudDialog = ref(false);
@@ -123,17 +127,38 @@ function abrirModalSolicitud(id: number) {
     openSolicitudDialog.value = true;
 }
 
+//modificado para enviar solicitud directamente
 function enviarSolicitud() {
+    if (!solicitudForm.mensaje?.trim()) {
+        triggerNotification('Escriba un mensaje');
+        return;
+    }
+    solicitudPendiente.value = {
+        id: solicitudForm.idpublicaciones!,
+        mensaje: solicitudForm.mensaje
+    };
+
+    openSolicitudDialog.value = false;
+    showConfirmDialog.value = true;
+}
+
+function confirmarEnvio() {
+    if (!solicitudPendiente.value) return;
+
     solicitudForm.post('/solicitudes', {
         preserveScroll: true,
         onSuccess: (page) => {
-            openSolicitudDialog.value = false;
+            showConfirmDialog.value = false;
+            solicitudPendiente.value = null;
             const msg = (page.props.message as string) || 'Solicitud enviada correctamente.';
             triggerNotification(msg);
+        },
+        onError: (errors) => {
+            const errorMsg = Object.values(errors).flat().join('\n');
+            triggerNotification('Error: ' + errorMsg);
         }
     });
 }
-
 function esDueno(pub: Publicacion): boolean {
     return pub.idempresa === currentEmpresaId;
 }
@@ -261,6 +286,27 @@ function esDueno(pub: Publicacion): boolean {
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
+                                <!-- AlertDialog de confirmación -->
+                                <AlertDialog :open="showConfirmDialog" @update:open="showConfirmDialog = $event">
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Confirmar solicitud</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                ¿Estás seguro de enviar esta solicitud de intercambio?
+                                                <br><br>
+                                                <strong>Mensaje:</strong> {{ solicitudPendiente?.mensaje }}
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel @click="showConfirmDialog = false">Cancelar
+                                            </AlertDialogCancel>
+                                            <AlertDialogAction @click="confirmarEnvio"
+                                                class="bg-primary hover:bg-primary/90">
+                                                Sí, enviar solicitud
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                             </template>
 
                             <template v-else-if="esDueno(pub) && userRol === 'Empresa'">
@@ -296,6 +342,7 @@ function esDueno(pub: Publicacion): boolean {
                         Escribe un mensaje para la empresa dueña del material.
                     </DialogDescription>
                 </DialogHeader>
+
                 <div class="grid gap-4 py-4">
                     <div class="grid gap-2">
                         <Label for="mensaje" class="text-muted-foreground">Mensaje</Label>
@@ -303,6 +350,12 @@ function esDueno(pub: Publicacion): boolean {
                             placeholder="Hola, estamos interesados en tu material. ¿Lo intercambias por...?"
                             class="bg-background border-border text-foreground" />
                     </div>
+                </div>
+                <div class="grid gap-2">
+                    <Label for="cantidad" class="text-muted-foreground">Cantidad a solicitar</Label>
+                    <Input id="cantidad" v-model="solicitudForm.cantidad" type="number" step="0.01" min="0.01"
+                        placeholder="Ingresa la cantidad que deseas solicitar"
+                        class="bg-background border-border text-foreground" />
                 </div>
                 <DialogFooter>
                     <Button variant="outline" @click="openSolicitudDialog = false"
