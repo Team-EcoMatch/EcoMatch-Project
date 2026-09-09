@@ -4,7 +4,19 @@ import { Head, router, usePage } from '@inertiajs/vue3';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, XCircle, Inbox, Send } from 'lucide-vue-next';
+import { CheckCircle2, XCircle, Inbox, Send, X } from 'lucide-vue-next';
+
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
 
 interface Solicitud {
     idsolicitud: number;
@@ -28,36 +40,58 @@ interface Solicitud {
 const props = defineProps<{
     recibidas: Solicitud[];
     enviadas: Solicitud[];
-   
 }>();
-
 
 const page = usePage();
 const message = (page.props.flash as any)?.message ?? null;
-
 const showToast = ref(false);
 const toastMessage = ref('');
+const toastType = ref<'success' | 'error'>('success');
 
 onMounted(() => {
     if (message) {
         toastMessage.value = message;
+        toastType.value = 'success';
         showToast.value = true;
         setTimeout(() => { showToast.value = false; }, 3000);
     }
 });
 
-function actualizarEstado(id: number, nuevoEstado: string) {
-    if (confirm(`¿Cambiar estado de la solicitud a "${nuevoEstado}"?`)) {
-        router.put(`/solicitudes/${id}`, { estado: nuevoEstado }, {
-            preserveScroll: true,
-            onSuccess: (page) => {
-                const msg = (page.props.flash as any)?.message ?? 'Estado actualizado.';
-                toastMessage.value = msg;
-                showToast.value = true;
-                setTimeout(() => { showToast.value = false; }, 3000);
-            }
-        });
-    }
+// --- Confirmación de cambio de estado con AlertDialog estilizado (reemplaza confirm()) ---
+const showConfirmDialog = ref(false);
+const accionPendiente = ref<{ id: number; nuevoEstado: string } | null>(null);
+
+function abrirConfirmacion(id: number, nuevoEstado: string) {
+    accionPendiente.value = { id, nuevoEstado };
+    showConfirmDialog.value = true;
+}
+
+function confirmarCambioEstado() {
+    if (!accionPendiente.value) return;
+    const { id, nuevoEstado } = accionPendiente.value;
+
+    router.put(`/solicitudes/${id}`, { estado: nuevoEstado }, {
+        preserveScroll: true,
+        onSuccess: (page) => {
+            const msg = (page.props.flash as any)?.message ?? 'Estado actualizado.';
+            toastMessage.value = msg;
+            toastType.value = 'success';
+            showToast.value = true;
+            setTimeout(() => { showToast.value = false; }, 3000);
+        },
+        onError: (errors) => {
+            const errorMsg = Object.values(errors).flat()[0] || 'Error al actualizar el estado.';
+            toastMessage.value = 'Error: ' + errorMsg;
+            toastType.value = 'error';
+            showToast.value = true;
+            setTimeout(() => { showToast.value = false; }, 5000);
+            console.error('Error al actualizar:', errors);
+        },
+        onFinish: () => {
+            showConfirmDialog.value = false;
+            accionPendiente.value = null;
+        }
+    });
 }
 
 function getEstadoBadge(estado: string) {
@@ -69,7 +103,6 @@ function getEstadoBadge(estado: string) {
     };
     return map[estado] || 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600';
 }
-
 </script>
 
 <template>
@@ -77,11 +110,38 @@ function getEstadoBadge(estado: string) {
     <Head title="Mis Solicitudes" />
 
     <div class="p-6 bg-background min-h-screen text-foreground">
-        <!-- Toast notification -->
-        <div v-if="showToast"
-            class="fixed top-6 right-6 z-50 bg-card border border-border shadow-lg rounded-lg p-4 max-w-sm">
-            <p class="text-sm font-medium">{{ toastMessage }}</p>
-        </div>
+        <!-- Toast notification (estilo idéntico al de Publicaciones) -->
+        <Transition enter-active-class="transition-all duration-300 ease-out"
+            enter-from-class="opacity-0 translate-y-[-10px] scale-95"
+            enter-to-class="opacity-100 translate-y-0 scale-100"
+            leave-active-class="transition-all duration-300 ease-in"
+            leave-from-class="opacity-100 translate-y-0 scale-100"
+            leave-to-class="opacity-0 translate-y-[-10px] scale-95">
+            <div v-if="showToast"
+                class="fixed top-6 right-6 z-[9999] w-[360px] rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
+                <div class="flex items-start gap-3 p-4">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                        :class="toastType === 'success' ? 'bg-green-500/10' : 'bg-red-500/10'">
+                        <CheckCircle2 class="h-5 w-5"
+                            :class="toastType === 'success' ? 'text-green-500' : 'text-red-500'" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-foreground">{{ toastType === 'success' ? 'Acción completada' :
+                            'Error' }}</p>
+                        <p class="mt-1 text-sm text-muted-foreground">{{ toastMessage }}</p>
+                    </div>
+                    <button type="button" @click="showToast = false"
+                        class="text-muted-foreground hover:text-foreground transition-colors">
+                        <X class="h-4 w-4" />
+                    </button>
+                </div>
+                <div class="h-1 bg-muted">
+                    <div class="h-full" :class="toastType === 'success' ? 'bg-green-500' : 'bg-red-500'"
+                        :style="{ animation: 'toast-progress 3s linear forwards' }">
+                    </div>
+                </div>
+            </div>
+        </Transition>
 
         <div class="max-w-7xl mx-auto">
             <h2 class="text-2xl font-bold mb-6">Gestión de Solicitudes</h2>
@@ -112,27 +172,25 @@ function getEstadoBadge(estado: string) {
                             </div>
                         </CardHeader>
                         <CardContent>
-                                                <p class="text-sm text-muted-foreground mb-2">
+                            <p class="text-sm text-muted-foreground mb-2">
                                 <strong>Solicitante:</strong>
-                                {{ (sol.empresa_origen || sol.empresa_origen)?.nombreEmpresa || 'Empresa desconocida' }}
+                                {{ sol.empresa_origen?.nombreEmpresa || 'Empresa desconocida' }}
                             </p>
-
                             <p class="text-sm text-muted-foreground mb-3">
                                 <strong>Mensaje:</strong> {{ sol.mensaje }}
                             </p>
-
                             <p class="text-xs text-muted-foreground">
                                 Cantidad solicitada: {{ sol.cantidad || 0 }} {{ sol.publicacion?.unidadMedida || '' }}
                             </p>
                             <!-- Botones de acción (solo si está Pendiente) -->
                             <div v-if="sol.estado === 'Pendiente'" class="flex gap-2 mt-3">
-                                <Button size="sm" @click="actualizarEstado(sol.idsolicitud, 'Aceptado')"
+                                <Button size="sm" @click="abrirConfirmacion(sol.idsolicitud, 'Aceptado')"
                                     class="bg-emerald-600 hover:bg-emerald-700 text-white">
                                     <CheckCircle2 class="w-4 h-4 mr-1" />
                                     Aceptar
                                 </Button>
                                 <Button size="sm" variant="destructive"
-                                    @click="actualizarEstado(sol.idsolicitud, 'Rechazado')">
+                                    @click="abrirConfirmacion(sol.idsolicitud, 'Rechazado')">
                                     <XCircle class="w-4 h-4 mr-1" />
                                     Rechazar
                                 </Button>
@@ -174,11 +232,50 @@ function getEstadoBadge(estado: string) {
                             <p class="text-xs text-muted-foreground">
                                 Cantidad solicitada: {{ sol.cantidad || 0 }} {{ sol.publicacion?.unidadMedida || '' }}
                             </p>
-
                         </CardContent>
                     </Card>
                 </div>
             </div>
         </div>
+
+        <!-- Confirmación estilizada (mismo estilo que "Solicitar Intercambio" en Publicaciones) -->
+        <AlertDialog :open="showConfirmDialog" @update:open="showConfirmDialog = $event">
+            <AlertDialogContent class="bg-card border-border text-foreground">
+                <AlertDialogHeader>
+                    <AlertDialogTitle>
+                        {{ accionPendiente?.nuevoEstado === 'Aceptado' ? 'Aceptar solicitud' : 'Rechazar solicitud' }}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription class="text-muted-foreground">
+                        ¿Estás seguro de que deseas
+                        <strong>{{ accionPendiente?.nuevoEstado === 'Aceptado' ? 'aceptar' : 'rechazar' }}</strong>
+                        esta solicitud de intercambio? Esta acción actualizará el estado de forma inmediata.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel
+                        class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
+                        Cancelar
+                    </AlertDialogCancel>
+                    <AlertDialogAction @click="confirmarCambioEstado" :class="accionPendiente?.nuevoEstado === 'Aceptado'
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                        : 'bg-destructive hover:bg-destructive/90 text-destructive-foreground'">
+                        Sí, {{ accionPendiente?.nuevoEstado === 'Aceptado' ? 'aceptar' : 'rechazar' }}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
     </div>
 </template>
+
+<style>
+@keyframes toast-progress {
+    from {
+        width: 100%;
+    }
+
+    to {
+        width: 0%;
+    }
+}
+</style>
