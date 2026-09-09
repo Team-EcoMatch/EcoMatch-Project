@@ -35,7 +35,7 @@ class SolicitudController extends Controller
         return Inertia::render('Solicitudes/Index', [
             'recibidas' => $recibidas,
             'enviadas'  => $enviadas,
-            'debug'     => $recibidas->first()->empresaOrigen ?? 'no hay',
+
         ]);
     }
 
@@ -65,7 +65,12 @@ class SolicitudController extends Controller
                 'error' => 'No puedes solicitar tu propio material.'
             ]);
         }
-
+        //validacion  para verificar stock disponble
+        if ($publicacion->cantidad < $validated['cantidad']) {
+            return redirect()->back()->withErrors([
+                'error' => "No hay suficiente stock disponible. Disponible: {$publicacion->cantidad} {$publicacion->unidadMedida}, Solicitado: {$validated['cantidad']} {$publicacion->unidadMedida}."
+            ]);
+        }
         // Verificar duplicado
         $existe = Solicitud::where('idpublicaciones', $publicacion->idpublicaciones)
             ->where('idEmpresaOrigen', $empresaOrigen)
@@ -107,7 +112,7 @@ class SolicitudController extends Controller
 
             if ($publicacion->cantidad < $solicitud->cantidad) {
                 return redirect()->back()->withErrors([
-                    'error' => 'No hay suficiente stock disponible para esta solicitud.'
+                    'error' => 'El stock disponible ya no es suficiente para esta solicitud. Por favor contactar con el solicitante.'
                 ]);
             }
 
