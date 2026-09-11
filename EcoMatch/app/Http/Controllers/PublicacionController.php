@@ -27,7 +27,7 @@ class PublicacionController extends Controller
         return Inertia::render('Publicaciones/Index', [
             'publicaciones' => $publicaciones,
             'categorias' => $categorias,
-            'empresaAuthId' => $idEmpresa, 
+            'empresaAuthId' => $idEmpresa,
         ]);
     }
 
@@ -41,7 +41,7 @@ class PublicacionController extends Controller
         ]);
     }
 
-        public function store(Request $request)
+    public function store(Request $request)
     {
         $idEmpresa = Auth::user()->idempresa;
 
@@ -56,19 +56,32 @@ class PublicacionController extends Controller
         ]);
 
         if ($request->hasFile('urlImagen')) {
-            $path = $request->file('urlImagen')->store('publicaciones', 'public');
-            $validated['urlImagen'] = '/storage/' . $path;
+            $image = $request->file('urlImagen');
+
+            $response = \Illuminate\Support\Facades\Http::attach(
+                'file',
+                file_get_contents($image->getRealPath()),
+                $image->getClientOriginalName()
+            )->post('https://api.cloudinary.com/v1_1/' . env('CLOUDINARY_CLOUD_NAME') . '/image/upload', [
+                'upload_preset' => 'ecomatch_preset',
+            ]);
+
+            if ($response->successful()) {
+                $validated['urlImagen'] = $response->json()['secure_url'];
+            } else {
+                return back()->withErrors(['urlImagen' => 'Error al subir la imagen a la nube.']);
+            }
         }
 
         $esJefe = Auth::user()->rol->tipo === 'Jefe';
         $validated['estado'] = $esJefe ? 'Disponible' : 'Pendiente';
-        
+
         $validated['idempresa'] = $idEmpresa;
 
         Publicacion::create($validated);
 
-        $mensaje = $esJefe 
-            ? 'Publicación creada y disponible exitosamente.' 
+        $mensaje = $esJefe
+            ? 'Publicación creada y disponible exitosamente.'
             : 'Publicación enviada a aprobación.';
 
         return redirect()->route('publicaciones.index')->with('message', $mensaje);
@@ -103,8 +116,21 @@ class PublicacionController extends Controller
         ]);
 
         if ($request->hasFile('urlImagen')) {
-            $path = $request->file('urlImagen')->store('publicaciones', 'public');
-            $validated['urlImagen'] = '/storage/' . $path;
+            $image = $request->file('urlImagen');
+
+            $response = \Illuminate\Support\Facades\Http::attach(
+                'file',
+                file_get_contents($image->getRealPath()),
+                $image->getClientOriginalName()
+            )->post('https://api.cloudinary.com/v1_1/' . env('CLOUDINARY_CLOUD_NAME') . '/image/upload', [
+                'upload_preset' => 'ecomatch_preset',
+            ]);
+
+            if ($response->successful()) {
+                $validated['urlImagen'] = $response->json()['secure_url'];
+            } else {
+                return back()->withErrors(['urlImagen' => 'Error al subir la nueva imagen a la nube.']);
+            }
         } else {
             $validated['urlImagen'] = $request->input('urlImagen_actual');
         }

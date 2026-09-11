@@ -131,4 +131,22 @@ class SolicitudController extends Controller
 
         return redirect()->back()->with('message', "Solicitud {$validated['estado']} correctamente.");
     }
+
+    public function historial()
+    {
+        $idEmpresa = Auth::user()->idempresa;
+
+        $historial = Solicitud::with(['publicacion.empresa', 'empresaOrigen', 'empresaDestino'])
+            ->where(function ($query) use ($idEmpresa) {
+                $query->where('idEmpresaOrigen', $idEmpresa)
+                    ->orWhere('idEmpresaDestino', $idEmpresa);
+            })
+            ->where('estado', '!=', 'Pendiente')
+            ->latest('idsolicitud')
+            ->get();
+
+        return Inertia::render('Historial/Index', [
+            'historial' => $historial
+        ]);
+    }
 }

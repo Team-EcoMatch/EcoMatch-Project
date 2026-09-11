@@ -36,10 +36,12 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, Request $request) {
-            if (in_array($e->getStatusCode(), [403, 404, 500])) {
-                return \Inertia\Inertia::render('Error', ['status' => $e->getStatusCode()])
-                    ->toResponse($request)
-                    ->setStatusCode($e->getStatusCode());
+            if (in_array($e->getStatusCode(), [403, 404, 500]) && !$request->isMethod('get') || !str_contains($request->getPathInfo(), '.')) {
+                if ($request->header('X-Inertia') || $request->isMethod('get')) {
+                    return \Inertia\Inertia::render('Error', ['status' => $e->getStatusCode()])
+                        ->toResponse($request)
+                        ->setStatusCode($e->getStatusCode());
+                }
             }
         });
     })->create();

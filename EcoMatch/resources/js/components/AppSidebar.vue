@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
-import { Boxes, Building, CheckCircle2, Inbox, MapPinned, Users, X } from 'lucide-vue-next';
+import { Boxes, Building, CheckCircle2, Inbox, MapPinned, Users, X , History} from 'lucide-vue-next';
 
 const page = usePage();
 
@@ -21,7 +21,7 @@ const dashboardUrl = computed(() =>
     page.props.currentTeam ? dashboard(page.props.currentTeam.slug).url : '/',
 );
 
-const idEmpresa = computed(() => page.props.auth.user.idempresa);
+const idEmpresa = computed(() => page.props.auth?.user?.idempresa);
 
 const mainNavItems = computed<NavItem[]>(() => {
     const items = [
@@ -29,10 +29,11 @@ const mainNavItems = computed<NavItem[]>(() => {
         { title: 'Categorías',       href: '/categorias',                          icon: Tags       },
         { title: 'Publicaciones',    href: '/publicaciones',                       icon: Boxes      },
         { title: 'Solicitudes',      href: '/solicitudes',                         icon: Inbox      },
+        { title: 'Historial',        href: '/historial',                            icon:History},
         { title: 'Mapa Interactivo', href: '/mapa',                                icon: MapPinned  },
     ];
 
-    if (page.props.auth.user.rol === 'Jefe') {
+    if (page.props.auth?.user?.rol === 'Jefe') {
         items.push({ title: 'Perfil de Empresa', href: `/empresas/${idEmpresa.value}/edit`, icon: Building });
         items.push({ title: 'Empleados',         href: '/empleados',                        icon: Users    });
     }
