@@ -19,11 +19,11 @@ class Mensaje extends Model
 
     public function solicitud()
     {
-        return $this->belongsTo(Solicitud::class, 'idsolicitud');
+        return $this->belongsTo(Solicitud::class, 'idsolicitud', 'idsolicitud');
     }
 
     public function empresaEmisora()
     {
-        return $this->belongsTo(Empresa::class, 'idEmisora');
+        return $this->belongsTo(Empresa::class, 'idEmisora', 'idempresa');
     }
 }

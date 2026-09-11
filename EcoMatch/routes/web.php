@@ -11,6 +11,7 @@ use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminPublicacionController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\EmpleadoController;
 
 Route::get('/', function () {
@@ -58,6 +59,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     //Busqueda geoespacial
     Route::get('/buscar', [PublicacionController::class, 'search'])->name('publicaciones.search');
+
+    //Rutas para los chats
+    Route::get('/chat/{solicitud}', [ChatController::class, 'index'])->name('chat.index');
+    Route::post('/chat/{solicitud}', [ChatController::class, 'store'])->name('chat.store');
 });
 
 // Rutas EXCLUSIVAS para el Jefe de Empresa
@@ -75,7 +80,7 @@ Route::middleware(['auth', 'verified', 'role:Jefe'])->group(function () {
     Route::get('/empleados', [EmpleadoController::class, 'index'])->name('empleados.index');
     Route::post('/empleados', [EmpleadoController::class, 'store'])->name('empleados.store');
 
-    // Administrar publicaciones (Si lo usas para el panel de administración del Jefe)
+    // Administrar publicaciones 
     Route::get('/admin/publicaciones', [AdminPublicacionController::class, 'index'])->name('admin.publicaciones.index');
     Route::patch('/admin/publicaciones/{id}/estado', [AdminPublicacionController::class, 'updateEstado'])->name('admin.publicaciones.updateEstado');
     Route::patch('/admin/publicaciones/{id}/approve', [AdminPublicacionController::class, 'approve'])->name('admin.publicaciones.approve');

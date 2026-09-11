@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -103,6 +104,7 @@ function getEstadoBadge(estado: string) {
     };
     return map[estado] || 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600';
 }
+
 </script>
 
 <template>
@@ -196,6 +198,14 @@ function getEstadoBadge(estado: string) {
                                 </Button>
                             </div>
                         </CardContent>
+                        <!-- Botón para ir al chat en Solicitudes Recibidas -->
+                        <div v-if="sol.estado === 'Aceptado' || sol.estado === 'Completado'" class="mt-3">
+                            <Link :href="`/chat/${sol.idsolicitud}`">
+                                <Button size="sm" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                                    💬 Ir al chat con el solicitante
+                                </Button>
+                            </Link>
+                        </div>
                     </Card>
                 </div>
             </div>
@@ -233,6 +243,15 @@ function getEstadoBadge(estado: string) {
                                 Cantidad solicitada: {{ sol.cantidad || 0 }} {{ sol.publicacion?.unidadMedida || '' }}
                             </p>
                         </CardContent>
+                        <!-- Botón para ir al chat (solo si está Aceptado o Completado) -->
+                        <div v-if="sol.estado === 'Aceptado' || sol.estado === 'Completado'" class="mt-3">
+                            <Link :href="`/chat/${sol.idsolicitud}`">
+                                <Button size="sm" variant="outline"
+                                    class="w-full border-primary text-primary hover:bg-accent">
+                                    💬 Ir al chat
+                                </Button>
+                            </Link>
+                        </div>
                     </Card>
                 </div>
             </div>
