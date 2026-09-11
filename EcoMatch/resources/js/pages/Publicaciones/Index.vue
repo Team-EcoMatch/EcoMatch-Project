@@ -58,8 +58,8 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
-const currentEmpresaId = page.props.auth.user.idempresa;
-const userRol = page.props.auth.user.rol;
+const currentEmpresaId = page.props.auth?.user?.idempresa;
+const userRol = page.props.auth?.user?.rol;
 
 const showNotification = ref(false);
 const notificationMessage = ref(props.message || '');
@@ -113,7 +113,6 @@ function deletePublicacion(id: number) {
     });
 }
 
-// --- Confirmación de aprobar/rechazar con AlertDialog estilizado (reemplaza confirm()) ---
 const showModeracionDialog = ref(false);
 const moderacionPendiente = ref<{ id: number; accion: 'aprobar' | 'rechazar' } | null>(null);
 
@@ -158,10 +157,10 @@ const openSolicitudDialog = ref(false);
 function abrirModalSolicitud(id: number) {
     solicitudForm.idpublicaciones = id;
     solicitudForm.mensaje = '';
+    solicitudForm.cantidad = '';
     openSolicitudDialog.value = true;
 }
 
-//modificado para enviar solicitud directamente
 function enviarSolicitud() {
     if (!solicitudForm.cantidad || parseFloat(solicitudForm.cantidad) <= 0) {
         triggerNotification('Debes especificar una cantidad válida.');
@@ -187,6 +186,7 @@ function confirmarEnvio() {
         triggerNotification('Debes especificar una cantidad válida.');
         return;
     }
+
     solicitudForm.post('/solicitudes', {
         preserveScroll: true,
         onSuccess: (page) => {
@@ -292,9 +292,7 @@ function esDueno(pub: Publicacion): boolean {
                         </div>
 
                         <div class="flex justify-end gap-2 border-t border-border pt-4">
-                            <!-- 1. Si el usuario es JEFE y es DUEÑO de la publicación -->
                             <template v-if="esDueno(pub) && userRol === 'Jefe'">
-                                <!-- Si la publicación está PENDIENTE: solo Aprobar, Rechazar y Eliminar -->
                                 <template v-if="pub.estado === 'Pendiente'">
                                     <Button size="sm"
                                         @click="abrirConfirmacionModeracion(pub.idpublicaciones, 'aprobar')"
@@ -308,7 +306,6 @@ function esDueno(pub: Publicacion): boolean {
                                         <XCircle class="w-4 h-4 mr-1" />
                                         Rechazar
                                     </Button>
-                                    <!-- Eliminar siempre visible -->
                                     <AlertDialog>
                                         <AlertDialogTrigger as-child>
                                             <Button size="sm" variant="destructive"
@@ -339,7 +336,6 @@ function esDueno(pub: Publicacion): boolean {
                                     </AlertDialog>
                                 </template>
 
-                                <!-- Si la publicación NO está PENDIENTE: Editar + Eliminar -->
                                 <template v-else>
                                     <Link :href="`/publicaciones/${pub.idpublicaciones}/edit`">
                                         <Button size="sm" variant="outline"
@@ -380,7 +376,6 @@ function esDueno(pub: Publicacion): boolean {
                                 </template>
                             </template>
 
-                            <!-- 2. Si es dueño y rol Empresa: solo mensaje "Pendiente de aprobación" -->
                             <template v-else-if="esDueno(pub) && userRol === 'Empresa'">
                                 <span class="text-xs text-muted-foreground italic self-center">Pendiente de
                                     aprobación</span>
@@ -441,7 +436,6 @@ function esDueno(pub: Publicacion): boolean {
             </DialogContent>
         </Dialog>
 
-        <!-- Confirmación estilizada de Aprobar/Rechazar publicación (reemplaza confirm()) -->
         <AlertDialog :open="showModeracionDialog" @update:open="showModeracionDialog = $event">
             <AlertDialogContent class="bg-card border-border text-foreground">
                 <AlertDialogHeader>
@@ -468,6 +462,27 @@ function esDueno(pub: Publicacion): boolean {
                         ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                         : 'bg-amber-500 hover:bg-amber-600 text-white'">
                         Sí, {{ moderacionPendiente?.accion === 'aprobar' ? 'aprobar' : 'rechazar' }}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog :open="showConfirmDialog" @update:open="showConfirmDialog = $event">
+            <AlertDialogContent class="bg-card border-border text-foreground">
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmar Envío</AlertDialogTitle>
+                    <AlertDialogDescription class="text-muted-foreground">
+                        ¿Estás seguro de que deseas enviar esta solicitud de intercambio?
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel
+                        class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
+                        Cancelar
+                    </AlertDialogCancel>
+                    <AlertDialogAction @click="confirmarEnvio"
+                        class="bg-primary hover:bg-primary/90 text-primary-foreground">
+                        Sí, enviar
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

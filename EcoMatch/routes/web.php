@@ -81,4 +81,7 @@ Route::middleware(['auth', 'verified', 'role:Jefe'])->group(function () {
     Route::patch('/admin/publicaciones/{id}/approve', [AdminPublicacionController::class, 'approve'])->name('admin.publicaciones.approve');
     Route::patch('/admin/publicaciones/{id}/reject', [AdminPublicacionController::class, 'reject'])->name('admin.publicaciones.reject');
     Route::delete('/admin/publicaciones/{id}', [AdminPublicacionController::class, 'destroy'])->name('admin.publicaciones.destroy');
+
+
+    Route::get('/historial', [SolicitudController::class, 'historial'])->name('historial.index');
 });
