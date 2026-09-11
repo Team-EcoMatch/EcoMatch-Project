@@ -1,10 +1,31 @@
 #!/bin/bash
-# Cambiar el document root a /public
-sed -i "s|root /home/site/wwwroot|root /home/site/wwwroot/public|g" /etc/nginx/sites-available/default
+# 1. Sobreescribir la configuración de Nginx con una perfecta para Laravel
+cat << 'EOF' > /etc/nginx/sites-available/default
+server {
+    listen 8080;
+    server_name _;
+    root /home/site/wwwroot/public;
+    index index.php;
 
-# Asegurar que Laravel maneje las rutas (try_files)
-sed -i '/location \/ {/c\location / {\n    try_files $uri $uri/ /index.php?$query_string;\n}' /etc/nginx/sites-available/default
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
 
-# Recargar Nginx y iniciar PHP
-service nginx reload
+    location ~ \.php$ {
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires max;
+        log_not_found off;
+    }
+}
+EOF
+
+# 2. Reiniciar Nginx para aplicar la nueva configuración
+service nginx restart
+
+# 3. Iniciar PHP-FPM
 php-fpm
