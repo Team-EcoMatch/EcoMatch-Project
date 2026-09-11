@@ -26,6 +26,9 @@ return Application::configure(basePath: dirname(__DIR__))
             SetTeamUrlDefaults::class,
         ]);
 
+        // ¡AQUÍ AGREGAMOS LA LÍNEA PARA CONFIAR EN LOS PROXIES DE AZURE!
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
