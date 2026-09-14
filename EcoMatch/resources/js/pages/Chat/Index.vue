@@ -20,8 +20,27 @@ const showToast = ref(false);
 const toastMessage = ref('');
 const toastType = ref<'success' | 'error'>('success');
 
+// 🔥 Convertimos los mensajes a una ref para poder agregar mensajes con Echo sin recargar
+const mensajes = ref<any[]>([...props.mensajes]);
+
+const newMessage = ref('');
+const mensajesContainer = ref<HTMLElement | null>(null);
+
+// 🔥 Función para saber si el mensaje es propio (para alineación)
+function esMio(msg: any): boolean {
+    return msg.idEmisora === props.empresaId;
+}
+
+function scrollToBottom() {
+    nextTick(() => {
+        if (mensajesContainer.value) {
+            mensajesContainer.value.scrollTop = mensajesContainer.value.scrollHeight;
+        }
+    });
+}
 
 onMounted(() => {
+    // Toasts
     if (message) {
         toastMessage.value = message;
         toastType.value = 'success';
@@ -34,27 +53,39 @@ onMounted(() => {
         showToast.value = true;
         setTimeout(() => { showToast.value = false; }, 3000);
     }
+
     scrollToBottom();
+
+    if (typeof window !== 'undefined' && window.Echo) {
+        window.Echo.private(`chat.${props.solicitud.idsolicitud}`)
+            .listen('.mensaje.enviado', (e: any) => {
+                const existe = mensajes.value.some(m => m.idmensajes === e.mensaje.idmensajes);
+                if (!existe) {
+                    mensajes.value.push(e.mensaje);
+                    scrollToBottom();
+                }
+            });
+    }
 });
 
-const newMessage = ref('');
-const mensajesContainer = ref<HTMLElement | null>(null);
-
-function scrollToBottom() {
-    nextTick(() => {
-        if (mensajesContainer.value) {
-            mensajesContainer.value.scrollTop = mensajesContainer.value.scrollHeight;
-        }
-    });
-}
+onBeforeUnmount(() => {
+    if (typeof window !== 'undefined' && window.Echo) {
+        window.Echo.leave(`chat.${props.solicitud.idsolicitud}`);
+    }
+});
 
 function enviarMensaje() {
     if (!newMessage.value.trim()) return;
-    router.post(`/chat/${props.solicitud.idsolicitud}`, { contenido: newMessage.value }, {
+
+    const contenido = newMessage.value;
+    newMessage.value = '';
+
+    router.post(`/chat/${props.solicitud.idsolicitud}`, { contenido }, {
         preserveScroll: true,
         onSuccess: () => {
-            newMessage.value = '';
-            router.reload(); 
+            // El mensaje llegará por WebSocket al otro usuario.
+            // Para el emisor, lo agregamos manualmente aquí.
+            // (Opcional: si no usas ->toOthers(), llegará también por WS y este paso se evita)
         },
         onError: (errors) => {
             const msg = Object.values(errors).flat().join('\n');
@@ -62,21 +93,11 @@ function enviarMensaje() {
             toastType.value = 'error';
             showToast.value = true;
             setTimeout(() => { showToast.value = false; }, 3000);
+            // Devolver el texto para que el usuario no pierda lo que escribió
+            newMessage.value = contenido;
         }
     });
 }
-
-// Auto-refresh cada 5 segundos
-let interval: number;
-onMounted(() => {
-    interval = setInterval(() => {
-        router.reload(); // ← corregido
-    }, 5000);
-});
-
-onBeforeUnmount(() => {
-    clearInterval(interval);
-});
 </script>
 
 <template>
@@ -130,26 +151,32 @@ onBeforeUnmount(() => {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <!-- Mensajes -->
+                    <!-- Mensajes estilo WhatsApp -->
                     <div ref="mensajesContainer"
                         class="h-96 overflow-y-auto border border-border rounded-md p-4 mb-4 bg-muted/10">
                         <div v-if="mensajes.length === 0" class="text-center text-muted-foreground py-8">
                             No hay mensajes. ¡Envía el primero!
                         </div>
-                        <div v-for="msg in mensajes" :key="msg.idmensajes" class="mb-3">
-                            <div class="flex items-start gap-2">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-semibold text-sm">
-                                            {{ msg.emisora?.nombreEmpresa || 'Empresa' }}
-                                        </span>
-                                        <span class="text-xs text-muted-foreground">
-                                            {{ new Date(msg.created_at).toLocaleString() }}
-                                        </span>
-                                    </div>
-                                    <p class="text-sm bg-card p-2 rounded-md border border-border mt-1">
-                                        {{ msg.contenido }}
-                                    </p>
+
+                        <div v-for="msg in mensajes" :key="msg.idmensajes" class="mb-3 flex"
+                            :class="esMio(msg) ? 'justify-end' : 'justify-start'">
+                            <div class="max-w-[75%]">
+                                <!-- Nombre + hora -->
+                                <div class="text-xs mb-1"
+                                    :class="esMio(msg) ? 'text-right text-muted-foreground' : 'text-left text-muted-foreground'">
+                                    <strong>{{ (msg.empresa_emisora || msg.empresaEmisora || msg.emisora)?.nombreEmpresa || 'Empresa' }}</strong>
+                                    <span class="ml-1">
+                                        · {{ new Date(msg.created_at).toLocaleTimeString([], {
+                                            hour: '2-digit', minute:
+                                                '2-digit'
+                                        }) }}
+                                    </span>
+                                </div>
+                                <!-- Burbuja -->
+                                <div class="px-3 py-2 rounded-2xl shadow-sm text-sm break-words" :class="esMio(msg)
+                                    ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100 rounded-br-sm'
+                                    : 'bg-muted text-foreground dark:bg-muted/60 rounded-bl-sm'">
+                                    {{ msg.contenido }}
                                 </div>
                             </div>
                         </div>

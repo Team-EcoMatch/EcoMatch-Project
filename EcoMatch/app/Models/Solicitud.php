@@ -25,7 +25,7 @@ class Solicitud extends Model
 
     public function mensajes()
     {
-        return $this->hasMany(Mensaje::class, 'solicitudes_idsolicitud');
+        return $this->hasMany(Mensaje::class, 'idsolicitud', 'idsolicitud');
     }
 
     public function empresaOrigen()

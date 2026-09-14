@@ -63,6 +63,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     //Rutas para los chats
     Route::get('/chat/{solicitud}', [ChatController::class, 'index'])->name('chat.index');
     Route::post('/chat/{solicitud}', [ChatController::class, 'store'])->name('chat.store');
+    Route::get('/chats', [ChatController::class, 'listaChats'])->name('chat.lista');
 });
 
 // Rutas EXCLUSIVAS para el Jefe de Empresa
