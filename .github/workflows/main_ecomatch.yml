@@ -27,18 +27,31 @@ jobs:
         id: check_files
         uses: andstor/file-existence-action@v1
         with:
-          files: 'composer.json'
+          files: 'EcoMatch/composer.json'
 
       - name: Run composer install if composer.json exists
         if: steps.check_files.outputs.files_exists == 'true'
+        working-directory: EcoMatch
         run: composer validate --no-check-publish && composer install --prefer-dist --no-progress
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install NPM dependencies
+        working-directory: EcoMatch
+        run: npm install
+
+      - name: Build frontend assets
+        working-directory: EcoMatch
+        run: npm run build
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: php-app
-          path: .
+          path: EcoMatch 
 
   deploy:
     runs-on: ubuntu-latest
