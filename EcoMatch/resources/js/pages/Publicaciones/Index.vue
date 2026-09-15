@@ -113,6 +113,8 @@ function deletePublicacion(id: number) {
     });
 }
 
+
+// --- Confirmación de aprobar/rechazar con AlertDialog estilizado (reemplaza confirm()) ---
 const showModeracionDialog = ref(false);
 const moderacionPendiente = ref<{ id: number; accion: 'aprobar' | 'rechazar' } | null>(null);
 
@@ -170,13 +172,20 @@ function enviarSolicitud() {
         triggerNotification('Escriba un mensaje');
         return;
     }
-    solicitudPendiente.value = {
-        id: solicitudForm.idpublicaciones!,
-        mensaje: solicitudForm.mensaje
-    };
 
-    openSolicitudDialog.value = false;
-    showConfirmDialog.value = true;
+    solicitudForm.post('/solicitudes', {
+        preserveScroll: true,
+        onSuccess: (page) => {
+            openSolicitudDialog.value = false;
+            solicitudForm.reset();
+            const msg = (page.props.message as string) || 'Solicitud enviada correctamente.';
+            triggerNotification(msg);
+        },
+        onError: (errors) => {
+            const errorMsg = Object.values(errors).flat().join('\n');
+            triggerNotification('Error: ' + errorMsg);
+        }
+    });
 }
 
 function confirmarEnvio() {

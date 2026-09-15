@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
-import { Boxes, Building, CheckCircle2, Inbox, MapPinned, Users, X , History} from 'lucide-vue-next';
+import { Boxes, Building, CheckCircle2, Inbox, MapPinned, Users, X , History,  MessageSquare } from 'lucide-vue-next';
 
 const page = usePage();
 
@@ -29,6 +29,7 @@ const mainNavItems = computed<NavItem[]>(() => {
         { title: 'Categorías',       href: '/categorias',                          icon: Tags       },
         { title: 'Publicaciones',    href: '/publicaciones',                       icon: Boxes      },
         { title: 'Solicitudes',      href: '/solicitudes',                         icon: Inbox      },
+        { title: 'Chats',            href: '/chats',              icon: MessageSquare  }, 
         { title: 'Historial',        href: '/historial',                            icon:History},
         { title: 'Mapa Interactivo', href: '/mapa',                                icon: MapPinned  },
     ];
