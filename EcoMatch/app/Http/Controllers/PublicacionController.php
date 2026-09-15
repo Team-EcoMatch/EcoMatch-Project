@@ -7,6 +7,7 @@ use App\Models\Categoria;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 
 class PublicacionController extends Controller
 {
@@ -58,18 +59,25 @@ class PublicacionController extends Controller
         if ($request->hasFile('urlImagen')) {
             $image = $request->file('urlImagen');
 
-            $response = \Illuminate\Support\Facades\Http::attach(
+            $http = Http::attach(
                 'file',
                 file_get_contents($image->getRealPath()),
                 $image->getClientOriginalName()
-            )->post('https://api.cloudinary.com/v1_1/' . env('CLOUDINARY_CLOUD_NAME') . '/image/upload', [
+            );
+
+            if (app()->environment('local')) {
+                $http = $http->withOptions(['verify' => false]);
+            }
+
+            $response = $http->post('https://api.cloudinary.com/v1_1/' . env('CLOUDINARY_CLOUD_NAME') . '/image/upload', [
                 'upload_preset' => 'ecomatch_preset',
             ]);
 
             if ($response->successful()) {
                 $validated['urlImagen'] = $response->json()['secure_url'];
             } else {
-                return back()->withErrors(['urlImagen' => 'Error al subir la imagen a la nube.']);
+                $errorMessage = $response->json()['error']['message'] ?? 'Error desconocido de Cloudinary.';
+                return back()->withErrors(['urlImagen' => 'Cloudinary dice: ' . $errorMessage]);
             }
         }
 
@@ -118,18 +126,25 @@ class PublicacionController extends Controller
         if ($request->hasFile('urlImagen')) {
             $image = $request->file('urlImagen');
 
-            $response = \Illuminate\Support\Facades\Http::attach(
+            $http = Http::attach(
                 'file',
                 file_get_contents($image->getRealPath()),
                 $image->getClientOriginalName()
-            )->post('https://api.cloudinary.com/v1_1/' . env('CLOUDINARY_CLOUD_NAME') . '/image/upload', [
+            );
+
+            if (app()->environment('local')) {
+                $http = $http->withOptions(['verify' => false]);
+            }
+
+            $response = $http->post('https://api.cloudinary.com/v1_1/' . env('CLOUDINARY_CLOUD_NAME') . '/image/upload', [
                 'upload_preset' => 'ecomatch_preset',
             ]);
 
             if ($response->successful()) {
                 $validated['urlImagen'] = $response->json()['secure_url'];
             } else {
-                return back()->withErrors(['urlImagen' => 'Error al subir la nueva imagen a la nube.']);
+                $errorMessage = $response->json()['error']['message'] ?? 'Error desconocido de Cloudinary.';
+                return back()->withErrors(['urlImagen' => 'Cloudinary dice: ' . $errorMessage]);
             }
         } else {
             $validated['urlImagen'] = $request->input('urlImagen_actual');
