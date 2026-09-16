@@ -10,8 +10,16 @@ class Publicacion extends Model
     protected $primaryKey = 'idpublicaciones';
 
     protected $fillable = [
-        'idempresa', 'idcategorias', 'nombre', 'descripcion', 'cantidad',
-        'unidadMedida', 'frecuencia', 'estado', 'urlImagen', 
+        'idempresa',
+        'idcategorias',
+        'nombre',
+        'descripcion',
+        'cantidad',
+        'unidadMedida',
+        'frecuencia',
+        'estado',
+        'urlImagen',
+        'user_id',
     ];
 
     public function empresa()
@@ -27,5 +35,10 @@ class Publicacion extends Model
     public function solicitudes()
     {
         return $this->hasMany(Solicitud::class, 'idpublicaciones');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

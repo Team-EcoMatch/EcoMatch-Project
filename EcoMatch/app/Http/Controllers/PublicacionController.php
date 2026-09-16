@@ -65,6 +65,7 @@ class PublicacionController extends Controller
                 $image->getClientOriginalName()
             );
 
+            // Si estamos en local (tu PC), apagamos la verificación SSL
             if (app()->environment('local')) {
                 $http = $http->withOptions(['verify' => false]);
             }
@@ -81,8 +82,11 @@ class PublicacionController extends Controller
             }
         }
 
-        $esJefe = Auth::user()->rol->tipo === 'Jefe';
+        // 3. Asignar estado, empresa y el ID del usuario autor
+        $esJefe = Auth::user()->rol && strtolower(Auth::user()->rol->tipo) === 'jefe';
         $validated['estado'] = $esJefe ? 'Disponible' : 'Pendiente';
+        $validated['idempresa'] = $idEmpresa;
+        $validated['user_id'] = Auth::id(); // ← AQUÍ es donde debe ir
 
         $validated['idempresa'] = $idEmpresa;
 
@@ -132,6 +136,7 @@ class PublicacionController extends Controller
                 $image->getClientOriginalName()
             );
 
+            // Si estamos en local (tu PC), apagamos la verificación SSL
             if (app()->environment('local')) {
                 $http = $http->withOptions(['verify' => false]);
             }

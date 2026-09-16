@@ -87,6 +87,7 @@ class SolicitudController extends Controller
             'idpublicaciones'  => $publicacion->idpublicaciones,
             'idEmpresaOrigen'  => $empresaOrigen,
             'idEmpresaDestino' => $publicacion->idempresa,
+            'user_id'          => Auth::id(),  
             'mensaje'          => $validated['mensaje'],
             'cantidad'         => $validated['cantidad'],
             'estado'           => 'Pendiente'

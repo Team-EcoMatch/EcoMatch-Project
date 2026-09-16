@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminPublicacionController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\EmpleadoController;
+use App\Http\Controllers\ReporteController;
 
 Route::get('/', function () {
     if (Auth::check() && Auth::user()->currentTeam) {
@@ -64,11 +65,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/chat/{solicitud}', [ChatController::class, 'index'])->name('chat.index');
     Route::post('/chat/{solicitud}', [ChatController::class, 'store'])->name('chat.store');
     Route::get('/chats', [ChatController::class, 'listaChats'])->name('chat.lista');
+      // Reportes (funciona para admin y para empresa; el controlador decide qué mostrar)
+    Route::get('/reportes', [ReporteController::class, 'index']) ->name('reportes.index');
+
+    // Opcional: mantener una ruta admin explícita
+    Route::get('/admin/reportes', [ReporteController::class, 'index']) ->name('admin.reportes.index');
 });
 
 // Rutas EXCLUSIVAS para el Jefe de Empresa
 Route::middleware(['auth', 'verified', 'role:Jefe'])->group(function () {
-    
+
     // Aprobar Publicaciones
     Route::post('/publicaciones/{id}/approve', [PublicacionController::class, 'approve'])->name('publicaciones.approve');
 
@@ -90,4 +96,6 @@ Route::middleware(['auth', 'verified', 'role:Jefe'])->group(function () {
 
 
     Route::get('/historial', [SolicitudController::class, 'historial'])->name('historial.index');
+
+  
 });

@@ -13,6 +13,7 @@ class Solicitud extends Model
         'idpublicaciones',
         'idEmpresaOrigen',
         'idEmpresaDestino',
+        'user_id',
         'mensaje',
         'cantidad',
         'estado'
@@ -36,5 +37,10 @@ class Solicitud extends Model
     public function empresaDestino()
     {
         return $this->belongsTo(Empresa::class, 'idEmpresaDestino', 'idempresa');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }
