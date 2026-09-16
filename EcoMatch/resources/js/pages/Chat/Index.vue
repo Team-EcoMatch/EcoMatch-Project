@@ -164,7 +164,8 @@ function enviarMensaje() {
                                 <!-- Nombre + hora -->
                                 <div class="text-xs mb-1"
                                     :class="esMio(msg) ? 'text-right text-muted-foreground' : 'text-left text-muted-foreground'">
-                                    <strong>{{ (msg.empresa_emisora || msg.empresaEmisora || msg.emisora)?.nombreEmpresa || 'Empresa' }}</strong>
+                                    <strong>{{ (msg.empresa_emisora || msg.empresaEmisora || msg.emisora)?.nombreEmpresa
+                                        || 'Empresa' }}</strong>
                                     <span class="ml-1">
                                         · {{ new Date(msg.created_at).toLocaleTimeString([], {
                                             hour: '2-digit', minute:
@@ -173,9 +174,11 @@ function enviarMensaje() {
                                     </span>
                                 </div>
                                 <!-- Burbuja -->
-                                <div class="px-3 py-2 rounded-2xl shadow-sm text-sm break-words" :class="esMio(msg)
-                                    ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100 rounded-br-sm'
-                                    : 'bg-muted text-foreground dark:bg-muted/60 rounded-bl-sm'">
+
+                                <div class="px-3 py-2 rounded-2xl shadow-sm text-sm break-words border border-border"
+    :class="esMio(msg)
+        ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/50 dark:text-emerald-100 rounded-br-sm'
+        : 'bg-muted text-foreground dark:bg-muted/70 rounded-bl-sm'">
                                     {{ msg.contenido }}
                                 </div>
                             </div>

@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
-import { Boxes, Building, CheckCircle2, Inbox, MapPinned, Users, X , History,  MessageSquare } from 'lucide-vue-next';
+import { Boxes, Building, CheckCircle2, Inbox, MapPinned, Users, X , History,  MessageSquare, BarChart3 } from 'lucide-vue-next';
 
 const page = usePage();
 
@@ -32,6 +32,7 @@ const mainNavItems = computed<NavItem[]>(() => {
         { title: 'Chats',            href: '/chats',              icon: MessageSquare  }, 
         { title: 'Historial',        href: '/historial',                            icon:History},
         { title: 'Mapa Interactivo', href: '/mapa',                                icon: MapPinned  },
+        { title: 'Reportes', href: '/reportes', icon: BarChart3 },
     ];
 
     if (page.props.auth?.user?.rol === 'Jefe') {
