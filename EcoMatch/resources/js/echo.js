@@ -1,17 +1,22 @@
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 
-// Solo ejecutar en el navegador (no en SSR)
-if (typeof window !== 'undefined') {
-    window.Pusher = Pusher;
+export function initEcho(reverbConfig) {
+    if (typeof window !== 'undefined' && reverbConfig && reverbConfig.key) {
+        window.Pusher = Pusher;
 
-    window.Echo = new Echo({
-        broadcaster: 'reverb',
-        key: import.meta.env.VITE_REVERB_APP_KEY,
-        wsHost: import.meta.env.VITE_REVERB_HOST,
-        wsPort: import.meta.env.VITE_REVERB_PORT ?? 80,
-        wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
-        forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
-        enabledTransports: ['ws', 'wss'],
-    });
+        window.Echo = new Echo({
+            broadcaster: 'reverb',
+            key: reverbConfig.key,
+            wsHost: reverbConfig.host,
+            wsPort: reverbConfig.port ?? 80,
+            wssPort: reverbConfig.port ?? 443,
+            forceTLS: (reverbConfig.scheme ?? 'https') === 'https',
+            enabledTransports: ['ws', 'wss'],
+        });
+        
+        console.log('Reverb inicializado correctamente con la key:', reverbConfig.key);
+    } else {
+        console.warn('No se pudo inicializar Reverb: Falta la configuración.');
+    }
 }
