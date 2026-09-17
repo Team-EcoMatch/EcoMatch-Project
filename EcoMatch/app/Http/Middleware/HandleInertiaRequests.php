@@ -31,6 +31,13 @@ class HandleInertiaRequests extends Middleware
             'currentTeam' => fn () => $user?->currentTeam ? $user->toUserTeam($user->currentTeam) : null,
             'teams' => fn () => $user?->toUserTeams(includeCurrent: true) ?? [],
             'message' => fn () => $request->session()->get('message'),
+            
+            'reverbConfig' => [
+                'key' => config('broadcasting.connections.reverb.key'),
+                'host' => config('broadcasting.connections.reverb.options.host'),
+                'port' => config('broadcasting.connections.reverb.options.port', 443),
+                'scheme' => config('broadcasting.connections.reverb.options.scheme', 'https'),
+            ],
         ];
     }
 }
