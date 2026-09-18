@@ -34,9 +34,9 @@ class HandleInertiaRequests extends Middleware
             
             'reverbConfig' => [
                 'key' => config('broadcasting.connections.reverb.key'),
-                'host' => config('broadcasting.connections.reverb.options.host'),
-                'port' => config('broadcasting.connections.reverb.options.port', 443),
-                'scheme' => config('broadcasting.connections.reverb.options.scheme', 'https'),
+                'host' => parse_url(config('app.url'), PHP_URL_HOST),
+                'port' => 443,
+                'scheme' => 'https',
             ],
         ];
     }
