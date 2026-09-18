@@ -18,18 +18,19 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3' # Cambiado a 8.3 que es estable (8.5 da errores en GitHub)
-          coverage: none # Acelera la instalación
+          php-version: '8.4' # <--- CAMBIO AQUÍ a 8.4
+          coverage: none
 
       - name: Get composer cache directory
         id: composer-cache
+        working-directory: EcoMatch # <--- CAMBIO AQUÍ: Añadido el directorio
         run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
       - name: Cache dependencies
         uses: actions/cache@v4
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          key: ${{ runner.os }}-php-${{ hashFiles('EcoMatch/composer.lock') }}
           restore-keys: ${{ runner.os }}-php-
 
       - name: Run composer install
@@ -45,18 +46,17 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node-${{ hashFiles('EcoMatch/package-lock.json') }}
           restore-keys: ${{ runner.os }}-node-
 
       - name: Install NPM dependencies
         working-directory: EcoMatch
-        run: npm ci # Mucho más rápido y seguro que npm install
+        run: npm ci
 
       - name: Build frontend assets
         working-directory: EcoMatch
         run: npm run build
 
-      # NUEVO: Preparar el paquete SIN node_modules para que Azure lo reciba ligero
       - name: Prepare deployment artifact
         working-directory: EcoMatch
         run: |
