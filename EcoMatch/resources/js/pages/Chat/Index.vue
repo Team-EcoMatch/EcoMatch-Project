@@ -20,13 +20,11 @@ const showToast = ref(false);
 const toastMessage = ref('');
 const toastType = ref<'success' | 'error'>('success');
 
-// 🔥 Convertimos los mensajes a una ref para poder agregar mensajes con Echo sin recargar
 const mensajes = ref<any[]>([...props.mensajes]);
 
 const newMessage = ref('');
 const mensajesContainer = ref<HTMLElement | null>(null);
 
-// 🔥 Función para saber si el mensaje es propio (para alineación)
 function esMio(msg: any): boolean {
     return msg.idEmisora === props.empresaId;
 }
@@ -176,9 +174,9 @@ function enviarMensaje() {
                                 <!-- Burbuja -->
 
                                 <div class="px-3 py-2 rounded-2xl shadow-sm text-sm break-words border border-border"
-    :class="esMio(msg)
-        ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/50 dark:text-emerald-100 rounded-br-sm'
-        : 'bg-muted text-foreground dark:bg-muted/70 rounded-bl-sm'">
+                                    :class="esMio(msg)
+                                        ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/50 dark:text-emerald-100 rounded-br-sm'
+                                        : 'bg-muted text-foreground dark:bg-muted/70 rounded-bl-sm'">
                                     {{ msg.contenido }}
                                 </div>
                             </div>

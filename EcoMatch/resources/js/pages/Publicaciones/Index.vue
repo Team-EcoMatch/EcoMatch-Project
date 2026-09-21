@@ -251,12 +251,18 @@ function esDueno(pub: Publicacion): boolean {
         <div class="max-w-7xl mx-auto">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-semibold">Materiales Publicados</h2>
-                <Link href="/publicaciones/create">
-                    <Button class="bg-primary hover:bg-primary/90 text-primary-foreground">
+                <div class="flex gap-2">
+                    <Button @click="router.visit('/buscar')" variant="outline"
+                        class="border-primary text-primary hover:bg-accent">
+                        <Search class="w-4 h-4 mr-2" />
+                        Buscar por ubicación
+                    </Button>
+                    <Button @click="router.visit('/publicaciones/create')"
+                        class="bg-primary hover:bg-primary/90 text-primary-foreground">
                         <Plus class="w-4 h-4 mr-2" />
                         Crear Publicación
                     </Button>
-                </Link>
+                </div>
             </div>
 
             <div class="flex flex-col md:flex-row gap-4 mb-6">

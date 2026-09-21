@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid, PackageSearch, Search, Tags } from '@lucide/vue';
+import { BookOpen, FolderGit2, LayoutGrid, PackageSearch, Search, Tags, ScanSearch } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
-import { Boxes, Building, CheckCircle2, Inbox, MapPinned, Users, X , History,  MessageSquare, BarChart3 } from 'lucide-vue-next';
+import { Boxes, Building, CheckCircle2, Inbox, MapPinned, Users, X, History, MessageSquare, BarChart3 } from 'lucide-vue-next';
 
 const page = usePage();
 
@@ -25,19 +25,20 @@ const idEmpresa = computed(() => page.props.auth?.user?.idempresa);
 
 const mainNavItems = computed<NavItem[]>(() => {
     const items = [
-        { title: 'Dashboard',        href: dashboardUrl.value,                    icon: LayoutGrid },
-        { title: 'Categorías',       href: '/categorias',                          icon: Tags       },
-        { title: 'Publicaciones',    href: '/publicaciones',                       icon: Boxes      },
-        { title: 'Solicitudes',      href: '/solicitudes',                         icon: Inbox      },
-        { title: 'Chats',            href: '/chats',              icon: MessageSquare  }, 
-        { title: 'Historial',        href: '/historial',                            icon:History},
-        { title: 'Mapa Interactivo', href: '/mapa',                                icon: MapPinned  },
+        { title: 'Dashboard', href: dashboardUrl.value, icon: LayoutGrid },
+        { title: 'Categorías', href: '/categorias', icon: Tags },
+        { title: 'Publicaciones', href: '/publicaciones', icon: Boxes },
+        { title: 'Encontrar Materiales', href: '/buscar', icon: ScanSearch },
+        { title: 'Solicitudes', href: '/solicitudes', icon: Inbox },
+        { title: 'Chats', href: '/chats', icon: MessageSquare },
+        { title: 'Historial', href: '/historial', icon: History },
+        { title: 'Mapa Interactivo', href: '/mapa', icon: MapPinned },
         { title: 'Reportes', href: '/reportes', icon: BarChart3 },
     ];
 
     if (page.props.auth?.user?.rol === 'Jefe') {
         items.push({ title: 'Perfil de Empresa', href: `/empresas/${idEmpresa.value}/edit`, icon: Building });
-        items.push({ title: 'Empleados',         href: '/empleados',                        icon: Users    });
+        items.push({ title: 'Empleados', href: '/empleados', icon: Users });
     }
 
     return items;
@@ -62,12 +63,9 @@ watch(
 </script>
 
 <template>
-    <Transition
-        enter-active-class="transition-all duration-300 ease-out"
-        enter-from-class="opacity-0 translate-y-[-10px] scale-95"
-        enter-to-class="opacity-100 translate-y-0 scale-100"
-        leave-active-class="transition-all duration-300 ease-in"
-        leave-from-class="opacity-100 translate-y-0 scale-100"
+    <Transition enter-active-class="transition-all duration-300 ease-out"
+        enter-from-class="opacity-0 translate-y-[-10px] scale-95" enter-to-class="opacity-100 translate-y-0 scale-100"
+        leave-active-class="transition-all duration-300 ease-in" leave-from-class="opacity-100 translate-y-0 scale-100"
         leave-to-class="opacity-0 translate-y-[-10px] scale-95">
         <div v-if="showNotification"
             class="fixed top-6 right-6 z-[9999] w-[360px] rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
