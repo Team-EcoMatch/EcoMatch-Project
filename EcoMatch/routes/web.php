@@ -96,6 +96,4 @@ Route::middleware(['auth', 'verified', 'role:Jefe'])->group(function () {
 
 
     Route::get('/historial', [SolicitudController::class, 'historial'])->name('historial.index');
-
-  
 });
