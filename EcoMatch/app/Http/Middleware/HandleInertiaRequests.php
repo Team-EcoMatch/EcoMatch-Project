@@ -28,15 +28,15 @@ class HandleInertiaRequests extends Middleware
                 ]) : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
-            'currentTeam' => fn () => $user?->currentTeam ? $user->toUserTeam($user->currentTeam) : null,
-            'teams' => fn () => $user?->toUserTeams(includeCurrent: true) ?? [],
-            'message' => fn () => $request->session()->get('message'),
-            
+            'currentTeam' => fn() => $user?->currentTeam ? $user->toUserTeam($user->currentTeam) : null,
+            'teams' => fn() => $user?->toUserTeams(includeCurrent: true) ?? [],
+            'message' => fn() => $request->session()->get('message'),
+
             'reverbConfig' => [
                 'key' => config('broadcasting.connections.reverb.key'),
-                'host' => parse_url(config('app.url'), PHP_URL_HOST),
-                'port' => 443,
-                'scheme' => 'https',
+                'host' => config('broadcasting.connections.reverb.options.host') ?: parse_url(config('app.url'), PHP_URL_HOST),
+                'port' => config('broadcasting.connections.reverb.options.port') ?: 8080,
+                'scheme' => config('broadcasting.connections.reverb.options.scheme') ?: 'http',
             ],
         ];
     }

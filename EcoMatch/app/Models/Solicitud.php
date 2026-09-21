@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Solicitud extends Model
 {
@@ -29,12 +30,12 @@ class Solicitud extends Model
         return $this->hasMany(Mensaje::class, 'idsolicitud', 'idsolicitud');
     }
 
-    public function empresaOrigen()
+    public function empresa_origen()
     {
         return $this->belongsTo(Empresa::class, 'idEmpresaOrigen', 'idempresa');
     }
 
-    public function empresaDestino()
+    public function empresa_destino()
     {
         return $this->belongsTo(Empresa::class, 'idEmpresaDestino', 'idempresa');
     }
@@ -42,5 +43,10 @@ class Solicitud extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function bloqueos(): HasMany
+    {
+        return $this->hasMany(Bloqueo::class, 'idsolicitud', 'idsolicitud');
     }
 }

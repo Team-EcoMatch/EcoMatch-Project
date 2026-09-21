@@ -64,7 +64,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     //Rutas para los chats
     Route::get('/chat/{solicitud}', [ChatController::class, 'index'])->name('chat.index');
     Route::post('/chat/{solicitud}', [ChatController::class, 'store'])->name('chat.store');
-    Route::get('/chats', [ChatController::class, 'listaChats'])->name('chat.lista');
+    Route::post('/chat/{solicitud}/bloquear', [ChatController::class, 'bloquear'])->name('chat.bloquear');
+    Route::post('/chat/{solicitud}/desbloquear', [ChatController::class, 'desbloquear'])->name('chat.desbloquear');
+    Route::get('/chats',[ChatController::class,'listaChats'])->name('chat.lista');
       // Reportes (funciona para admin y para empresa; el controlador decide qué mostrar)
     Route::get('/reportes', [ReporteController::class, 'index']) ->name('reportes.index');
 
@@ -72,7 +74,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/admin/reportes', [ReporteController::class, 'index']) ->name('admin.reportes.index');
 });
 
-// Rutas EXCLUSIVAS para el Jefe de Empresa
+// Rutas EXCLUSIVAS para el Jefe de Empresa.......
 Route::middleware(['auth', 'verified', 'role:Jefe'])->group(function () {
 
     // Aprobar Publicaciones
@@ -97,5 +99,5 @@ Route::middleware(['auth', 'verified', 'role:Jefe'])->group(function () {
 
     Route::get('/historial', [SolicitudController::class, 'historial'])->name('historial.index');
 
-  
+    Route::delete('/empleados/{id}', [EmpleadoController::class, 'destroy'])->name('empleados.destroy');
 });
