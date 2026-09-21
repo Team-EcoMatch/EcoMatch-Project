@@ -168,4 +168,76 @@ class PublicacionController extends Controller
 
         return redirect()->route('publicaciones.index')->with('message', 'Publicación eliminada correctamente.');
     }
+
+         public function search(Request $request)
+    {
+        $request->validate([
+            'lat'       => 'nullable|numeric|between:-90,90',
+            'lng'       => 'nullable|numeric|between:-180,180',
+            'radio'     => 'nullable|numeric|min:1|max:1000',
+            'categoria' => 'nullable|integer|exists:categorias,idcategorias',
+            'busqueda'  => 'nullable|string|max:100',
+        ]);
+
+        $empresaId = Auth::user()->idempresa;
+        $empresa = Auth::user()->empresa;
+
+        // Si no vienen coordenadas en la URL, intentar usar las de su empresa por defecto
+        $lat = $request->filled('lat') ? (float) $request->input('lat') : ($empresa?->latitud ? (float) $empresa->latitud : null);
+        $lng = $request->filled('lng') ? (float) $request->input('lng') : ($empresa?->longitud ? (float) $empresa->longitud : null);
+        $radio = (float) $request->input('radio', 50);
+        $categoria = $request->input('categoria');
+        $busqueda = $request->input('busqueda');
+
+        // Si aún no hay coordenadas, mostrar la vista con la lista vacía lista para buscar
+        if (is_null($lat) || is_null($lng)) {
+            return Inertia::render('Publicaciones/Search', [
+                'publicaciones' => [
+                    'data' => [],
+                    'total' => 0,
+                    'from' => 0,
+                    'to' => 0,
+                    'prev_page_url' => null,
+                    'next_page_url' => null,
+                ],
+                'filtros' => [
+                    'lat' => '',
+                    'lng' => '',
+                    'radio' => $radio,
+                    'categoria' => $categoria ?? '',
+                    'busqueda' => $busqueda ?? '',
+                ],
+                'categorias' => Categoria::where('idempresa', $empresaId)->get(),
+                'advertencia' => 'Por favor ingresa coordenadas o presiona "Usar mi ubicación" para encontrar materiales.',
+            ]);
+        }
+
+        // Si sí hay coordenadas, ejecutar la búsqueda geoespacial
+        $query = Publicacion::disponibles()
+            ->with(['empresa', 'categoria'])
+            ->cercaDe($lat, $lng, $radio)
+            ->where('publicaciones.idempresa', '!=', $empresaId);
+
+        if ($categoria) {
+            $query->deCategoria($categoria);
+        }
+
+        if ($busqueda) {
+            $query->buscarTexto($busqueda);
+        }
+
+        $publicaciones = $query->paginate(12)->withQueryString();
+
+        // Redondear distancia
+        $publicaciones->getCollection()->transform(function ($item) {
+            $item->distancia_km = round($item->distancia_km, 2);
+            return $item;
+        });
+
+        return Inertia::render('Publicaciones/Search', [
+            'publicaciones' => $publicaciones,
+            'filtros' => compact('lat', 'lng', 'radio', 'categoria', 'busqueda'),
+            'categorias' => Categoria::where('idempresa', $empresaId)->get(),
+        ]);
+    }
 }
