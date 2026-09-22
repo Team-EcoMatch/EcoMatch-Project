@@ -72,7 +72,7 @@ class IndicadoresSheet implements FromArray, WithHeadings, WithTitle, WithStyles
         return [
             1 => [
                 'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
-                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '3B82F6']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '10B981']],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ],
         ];
@@ -84,6 +84,7 @@ class IndicadoresSheet implements FromArray, WithHeadings, WithTitle, WithStyles
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
+                // Borde a toda la tabla
                 $sheet->getStyle('A1:B6')->applyFromArray([
                     'borders' => [
                         'allBorders' => [
@@ -93,14 +94,16 @@ class IndicadoresSheet implements FromArray, WithHeadings, WithTitle, WithStyles
                     ],
                 ]);
 
+                // Los valores numéricos en verde
                 $sheet->getStyle('B2:B5')->applyFromArray([
-                    'font' => ['bold' => true, 'color' => ['rgb' => '1E40AF'], 'size' => 12],
+                    'font' => ['bold' => true, 'color' => ['rgb' => '065F46'], 'size' => 12],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
                 ]);
 
+                // Fila de periodo en cursiva
                 $sheet->getStyle('A6:B6')->applyFromArray([
                     'font' => ['italic' => true, 'color' => ['rgb' => '666666']],
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F9FAFB']],
                 ]);
 
                 $sheet->getRowDimension(1)->setRowHeight(25);
@@ -146,7 +149,7 @@ class EstadosSheet implements FromArray, WithHeadings, WithTitle, WithStyles, Wi
         return [
             1 => [
                 'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
-                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '3B82F6']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '10B981']],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ],
         ];
@@ -213,7 +216,7 @@ class MaterialesSheet implements FromArray, WithHeadings, WithTitle, WithStyles,
         return [
             1 => [
                 'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
-                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '3B82F6']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '10B981']],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ],
         ];
@@ -235,10 +238,11 @@ class MaterialesSheet implements FromArray, WithHeadings, WithTitle, WithStyles,
                     ],
                 ]);
 
+                // Formato numérico con separador de miles
                 $sheet->getStyle('B2:B' . $lastRow)->getNumberFormat()->setFormatCode('#,##0.00');
                 $sheet->getStyle('B2:C' . $lastRow)->applyFromArray([
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT],
-                    'font' => ['color' => ['rgb' => '1E40AF'], 'bold' => true],
+                    'font' => ['color' => ['rgb' => '065F46'], 'bold' => true],
                 ]);
 
                 $sheet->getRowDimension(1)->setRowHeight(25);
@@ -287,7 +291,7 @@ class RankingsSheet implements FromArray, WithHeadings, WithTitle, WithStyles, W
         return [
             1 => [
                 'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
-                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '3B82F6']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '10B981']],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ],
         ];
@@ -309,23 +313,23 @@ class RankingsSheet implements FromArray, WithHeadings, WithTitle, WithStyles, W
                     ],
                 ]);
 
-                // Colorear el tipo según la fila (tonos azules)
+                // Colorear el tipo según la fila
                 for ($i = 2; $i <= $lastRow; $i++) {
                     $tipo = $sheet->getCell('A' . $i)->getValue();
                     $color = match($tipo) {
                         'Empresa'   => 'DBEAFE',
-                        'Material'  => 'BFDBFE',
-                        'Categoría' => '93C5FD',
+                        'Material'  => 'D1FAE5',
+                        'Categoría' => 'EDE9FE',
                         default     => 'F3F4F6',
                     };
                     $sheet->getStyle('A' . $i)->applyFromArray([
                         'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $color]],
-                        'font' => ['bold' => true, 'color' => ['rgb' => '1E3A8A']],
+                        'font' => ['bold' => true],
                     ]);
                 }
 
                 $sheet->getStyle('C2:C' . $lastRow)->applyFromArray([
-                    'font' => ['bold' => true, 'color' => ['rgb' => '1E40AF']],
+                    'font' => ['bold' => true],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
                 ]);
 

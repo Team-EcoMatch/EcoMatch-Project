@@ -13,7 +13,7 @@ class Solicitud extends Model
     protected $fillable = [
         'idpublicaciones',
         'idEmpresaOrigen',
-        'idEmpresaDpestino',
+        'idEmpresaDestino',
         'user_id',
         'mensaje',
         'cantidad',
