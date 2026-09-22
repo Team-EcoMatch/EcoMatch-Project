@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, nextTick, onBeforeUnmount, computed } from 'vue';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage, Link } from '@inertiajs/vue3';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Send, CheckCircle2, X, Paperclip, Ban, Unlock, FileText, Download } from 'lucide-vue-next';
+import { Send, CheckCircle2, X, Paperclip, Ban, Unlock, FileText, Download, Check, CheckCheck, ArrowLeft } from 'lucide-vue-next';
 
 const props = defineProps<{
     solicitud: any;
@@ -89,6 +89,10 @@ const MAGIC_BYTES: Record<string, { pattern: string; tipos: string[] }> = {
     rar4: { pattern: '52 61 72 21 1a 07 00', tipos: ['rar'] },
     rar5: { pattern: '52 61 72 21 1a 07 01 00', tipos: ['rar'] },
     office_legacy: { pattern: 'd0 cf 11 e0 a1 b1 1a e1', tipos: ['doc', 'xls', 'ppt'] },
+    exe: { pattern: '4d 5a', tipos: ['exe'] },
+    elf: { pattern: '7f 45 4c 46', tipos: ['elf'] },
+    macho: { pattern: 'cf fa ed fe', tipos: ['macho'] },
+    java_class: { pattern: 'ca fe ba be', tipos: ['class'] },
 };
 
 function esMio(msg: any): boolean {
@@ -109,14 +113,14 @@ watch(
         const temporales = mensajes.value.filter(m =>
             String(m.idmensajes).startsWith('temp-') &&
             !nuevosMensajes.some(nm =>
-                nm.archivo_url === m.archivo_url ||
-                (nm.contenido === m.contenido && nm.idEmisora === m.idEmisora)
+                (m.archivo_url && nm.archivo_url === m.archivo_url) ||
+                (m.contenido === nm.contenido && m.idEmisora === nm.idEmisora)
             )
         );
         mensajes.value = [...nuevosMensajes, ...temporales];
         scrollToBottom();
     },
-    { deep: true }
+    { deep: true, flush: 'sync' }
 );
 
 function mostrarToast(msg: string, type: 'success' | 'error', duracion: number = 3000) {
@@ -129,6 +133,22 @@ function mostrarToast(msg: string, type: 'success' | 'error', duracion: number =
     toastTimer.value = window.setTimeout(() => {
         showToast.value = false;
     }, duracion);
+}
+
+function getCsrfToken(): string {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
+function getFetchHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': getCsrfToken(),
+        'Accept': 'application/json',
+    };
+    if (typeof window !== 'undefined' && window.Echo?.socketId()) {
+        headers['X-Socket-Id'] = window.Echo.socketId();
+    }
+    return headers;
 }
 
 function leerMagicBytes(file: File, numBytes: number = 12): Promise<string> {
@@ -182,6 +202,18 @@ async function detectarTipoReal(file: File): Promise<{ tipo: string; confiable: 
 async function validarConsistencia(file: File, extension: string): Promise<{ valido: boolean; error?: string }> {
     const deteccion = await detectarTipoReal(file);
 
+    const tiposPeligrosos = ['exe', 'elf', 'macho', 'java_class', 'riff-otro'];
+
+    if (extension === 'txt' || extension === 'csv') {
+        if (tiposPeligrosos.includes(deteccion.tipo)) {
+            return {
+                valido: false,
+                error: `El archivo dice ser .${extension} pero su contenido real es un ejecutable. Archivo peligroso.`
+            };
+        }
+        return { valido: true };
+    }
+
     const extensionATipo: Record<string, string> = {
         pdf: 'pdf',
         png: 'png',
@@ -200,10 +232,6 @@ async function validarConsistencia(file: File, extension: string): Promise<{ val
         ppt: 'office_legacy',
     };
 
-    if (extension === 'txt' || extension === 'csv') {
-        return { valido: true };
-    }
-
     const tipoEsperado = extensionATipo[extension];
     if (!tipoEsperado) {
         return { valido: false, error: `No se reconoce la extensión .${extension}` };
@@ -221,6 +249,13 @@ async function validarConsistencia(file: File, extension: string): Promise<{ val
     }
     if (extension === 'rar' && (deteccion.tipo === 'rar4' || deteccion.tipo === 'rar5')) {
         return { valido: true };
+    }
+
+    if (tiposPeligrosos.includes(deteccion.tipo)) {
+        return {
+            valido: false,
+            error: `El archivo dice ser .${extension} pero su contenido real es un ejecutable. Archivo peligroso.`
+        };
     }
 
     return {
@@ -295,18 +330,12 @@ async function validarArchivo(file: File): Promise<{ valido: boolean; error?: st
         tipo = 'comprimido';
         tamanoMaximo = TAMANOS_MAXIMOS.comprimido;
     } else {
-        return {
-            valido: false,
-            error: `La extensión ".${extension}" no está permitida.`
-        };
+        return { valido: false, error: `La extensión ".${extension}" no está permitida.` };
     }
 
     if (file.size > tamanoMaximo) {
         const mb = (tamanoMaximo / (1024 * 1024)).toFixed(0);
-        return {
-            valido: false,
-            error: `El archivo pesa ${formatSize(file.size)}. El máximo para ${tipo}s es ${mb}MB.`
-        };
+        return { valido: false, error: `El archivo pesa ${formatSize(file.size)}. El máximo para ${tipo}s es ${mb}MB.` };
     }
 
     if (file.name.length > 255) {
@@ -315,27 +344,27 @@ async function validarArchivo(file: File): Promise<{ valido: boolean; error?: st
 
     const consistencia = await validarConsistencia(file, extension);
     if (!consistencia.valido) {
-        return {
-            valido: false,
-            error: consistencia.error || 'El archivo no coincide con su extensión.'
-        };
+        return { valido: false, error: consistencia.error || 'El archivo no coincide con su extensión.' };
     }
 
     const mimeValido = validarMimeType(file, extension);
     if (!mimeValido) {
-        return {
-            valido: false,
-            error: `El tipo MIME del archivo no coincide con su extensión.`
-        };
+        return { valido: false, error: `El tipo MIME del archivo no coincide con su extensión.` };
     }
 
     const tipoParaBackend = tipo === 'imagen' ? 'imagen' : 'archivo';
-
     return { valido: true, tipo: tipoParaBackend };
 }
 
-onMounted(() => {
+function marcarComoLeido() {
+    fetch(`/chat/${props.solicitud.idsolicitud}/marcar-leido`, {
+        method: 'POST',
+        headers: getFetchHeaders(),
+        body: JSON.stringify({}),
+    }).catch(() => {});
+}
 
+onMounted(() => {
     if (message) {
         mostrarToast(message, 'success');
     }
@@ -348,16 +377,20 @@ onMounted(() => {
     if (typeof window !== 'undefined' && window.Echo) {
         window.Echo.private(`chat.${props.solicitud.idsolicitud}`)
             .listen('.mensaje.enviado', (e: any) => {
-                const existe = mensajes.value.some(m =>
-                    m.idmensajes === e.mensaje.idmensajes ||
-                    (String(m.idmensajes).startsWith('temp-') &&
-                        m.contenido === e.mensaje.contenido &&
-                        m.idEmisora === e.mensaje.idEmisora)
-                );
+                const existe = mensajes.value.some(m => m.idmensajes === e.mensaje.idmensajes);
                 if (!existe) {
                     mensajes.value.push(e.mensaje);
                     scrollToBottom();
+                    marcarComoLeido();
                 }
+            })
+            .listen('.mensaje.leido', (data: any) => {
+                data.idsMensajes.forEach((id: number) => {
+                    const msg = mensajes.value.find(m => m.idmensajes === id);
+                    if (msg) {
+                        msg.leido = true;
+                    }
+                });
             });
 
         window.Echo.private(`empresa.${props.empresaId}`)
@@ -365,24 +398,15 @@ onMounted(() => {
                 if (data.idempresa_bloqueada === props.empresaId) {
                     bloqueadoHaciaMi.value = true;
                     const motivoTexto = data.motivo && data.motivo !== 'Sin especificar'
-                        ? `\nMotivo: ${data.motivo}`
-                        : '';
-                    mostrarToast(
-                        `🚫 ${data.nombreBloqueadora} te ha bloqueado.${motivoTexto}`,
-                        'error',
-                        8000
-                    );
+                        ? `\nMotivo: ${data.motivo}` : '';
+                    mostrarToast(`🚫 ${data.nombreBloqueadora} te ha bloqueado.${motivoTexto}`, 'error', 8000);
                     newMessage.value = '';
                 }
             })
             .listen('.empresa.desbloqueada', (data: any) => {
                 if (data.idempresa_bloqueada === props.empresaId) {
                     bloqueadoHaciaMi.value = false;
-                    mostrarToast(
-                        `✅ ${data.nombreBloqueadora} te ha desbloqueado. Ya puedes enviar mensajes.`,
-                        'success',
-                        5000
-                    );
+                    mostrarToast(`✅ ${data.nombreBloqueadora} te ha desbloqueado.`, 'success', 5000);
                 }
             });
     }
@@ -398,15 +422,15 @@ onBeforeUnmount(() => {
     }
 });
 
-async function subirACloudinary(file: File): Promise<string> {
+async function subirACloudinary(fileContent: ArrayBuffer, fileName: string, fileType: string): Promise<string> {
+    const blob = new Blob([fileContent], { type: fileType });
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', props.uploadPreset);
-    formData.append('folder', `chat/${props.solicitud.idsolicitud}`);
+    formData.append('file', blob, fileName);
+    formData.append('upload_preset', props.uploadPreset || 'chat_preset');
 
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', `https://api.cloudinary.com/v1_1/${props.cloudName}/auto/upload`);
+        xhr.open('POST', `https://api.cloudinary.com/v1_1/${props.cloudName || 'nbwtcdmw'}/auto/upload`);
 
         xhr.upload.onprogress = (e) => {
             if (e.lengthComputable) {
@@ -419,7 +443,7 @@ async function subirACloudinary(file: File): Promise<string> {
                 const response = JSON.parse(xhr.responseText);
                 resolve(response.secure_url);
             } else {
-                reject(new Error('Error subiendo archivo'));
+                reject(new Error('Cloudinary: ' + xhr.responseText));
             }
         };
 
@@ -443,6 +467,7 @@ function crearMensajeLocal(datos: {
         archivo_url: datos.archivo_url || null,
         archivo_nombre: datos.archivo_nombre || null,
         archivo_tamano: datos.archivo_tamano || null,
+        leido: false,
         created_at: new Date().toISOString(),
         empresa_emisora: {
             idempresa: props.empresaId,
@@ -462,6 +487,17 @@ async function onFileSelected(event: Event) {
         return;
     }
 
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+        mostrarToast('El archivo no puede pesar más de 10MB', 'error');
+        if (fileInput.value) fileInput.value.value = '';
+        return;
+    }
+
+    const fileContent = await file.arrayBuffer();
+    const fileName = file.name;
+    const fileType = file.type;
+
     const validacion = await validarArchivo(file);
     if (!validacion.valido) {
         mostrarToast(validacion.error || 'Archivo no válido', 'error', 5000);
@@ -472,35 +508,50 @@ async function onFileSelected(event: Event) {
     uploading.value = true;
     uploadProgress.value = 0;
 
+    let tempId: string | null = null;
+
     try {
-        const secure_url = await subirACloudinary(file);
+        const secure_url = await subirACloudinary(fileContent, fileName, fileType);
         const tipo = validacion.tipo!;
 
         const mensajeLocal = crearMensajeLocal({
             contenido: '',
             tipo,
             archivo_url: secure_url,
-            archivo_nombre: file.name,
-            archivo_tamano: file.size,
+            archivo_nombre: fileName,
+            archivo_tamano: fileContent.byteLength,
         });
+        tempId = mensajeLocal.idmensajes;
         mensajes.value.push(mensajeLocal);
         scrollToBottom();
 
-        router.post(`/chat/${props.solicitud.idsolicitud}`, {
-            contenido: '',
-            tipo,
-            archivo_url: secure_url,
-            archivo_nombre: file.name,
-            archivo_tamano: file.size,
-        }, {
-            preserveScroll: true,
-            onError: (errors) => {
-                mensajes.value = mensajes.value.filter(m => m.idmensajes !== mensajeLocal.idmensajes);
-                mostrarToast('Error: ' + Object.values(errors).join(', '), 'error');
-            }
+        const res = await fetch(`/chat/${props.solicitud.idsolicitud}`, {
+            method: 'POST',
+            headers: getFetchHeaders(),
+            body: JSON.stringify({
+                contenido: '',
+                tipo,
+                archivo_url: secure_url,
+                archivo_nombre: fileName,
+                archivo_tamano: fileContent.byteLength,
+            }),
         });
-    } catch (err) {
-        mostrarToast('Error al subir el archivo', 'error');
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || 'Error al enviar');
+        }
+
+        const index = mensajes.value.findIndex(m => m.idmensajes === tempId);
+        if (index >= 0) {
+            mensajes.value[index] = data.mensaje;
+        }
+    } catch (err: any) {
+        if (tempId) {
+            mensajes.value = mensajes.value.filter(m => m.idmensajes !== tempId);
+        }
+        mostrarToast(err.message || 'Error al subir el archivo', 'error');
     } finally {
         uploading.value = false;
         uploadProgress.value = 0;
@@ -508,7 +559,7 @@ async function onFileSelected(event: Event) {
     }
 }
 
-function enviarMensaje() {
+async function enviarMensaje() {
     if (noPuedeEnviarMensajes.value) {
         mostrarToast('No puedes enviar mensajes. Fuiste bloqueado.', 'error');
         return;
@@ -518,24 +569,32 @@ function enviarMensaje() {
     const contenido = newMessage.value;
     newMessage.value = '';
 
-    const mensajeLocal = crearMensajeLocal({
-        contenido,
-        tipo: 'texto',
-    });
+    const mensajeLocal = crearMensajeLocal({ contenido, tipo: 'texto' });
     mensajes.value.push(mensajeLocal);
     scrollToBottom();
 
-    router.post(`/chat/${props.solicitud.idsolicitud}`, {
-        contenido,
-        tipo: 'texto'
-    }, {
-        preserveScroll: true,
-        onError: (errors) => {
-            mensajes.value = mensajes.value.filter(m => m.idmensajes !== mensajeLocal.idmensajes);
-            mostrarToast('Error: ' + Object.values(errors).flat().join('\n'), 'error');
-            newMessage.value = contenido;
+    try {
+        const res = await fetch(`/chat/${props.solicitud.idsolicitud}`, {
+            method: 'POST',
+            headers: getFetchHeaders(),
+            body: JSON.stringify({ contenido, tipo: 'texto' }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || 'Error al enviar');
         }
-    });
+
+        const index = mensajes.value.findIndex(m => m.idmensajes === mensajeLocal.idmensajes);
+        if (index >= 0) {
+            mensajes.value[index] = data.mensaje;
+        }
+    } catch (err: any) {
+        mensajes.value = mensajes.value.filter(m => m.idmensajes !== mensajeLocal.idmensajes);
+        mostrarToast(err.message || 'Error al enviar el mensaje', 'error');
+        newMessage.value = contenido;
+    }
 }
 
 function confirmarBloqueo() {
@@ -608,7 +667,14 @@ function abrirImagen(url: string) {
             <Card>
                 <CardHeader>
                     <CardTitle class="flex justify-between items-center">
-                        <span class="text-lg">💬 Chat - {{ solicitud.publicacion?.nombre || 'Intercambio' }}</span>
+                        <div class="flex items-center gap-3">
+                            <Link href="/chats">
+                                <Button variant="ghost" size="icon" class="shrink-0" title="Volver a chats">
+                                    <ArrowLeft class="w-5 h-5" />
+                                </Button>
+                            </Link>
+                            <span class="text-lg">💬 {{ solicitud.publicacion?.nombre || 'Intercambio' }}</span>
+                        </div>
 
                         <Dialog v-if="!bloqueadoPorMi" v-model:open="showBloqueoModal">
                             <DialogTrigger as-child>
@@ -678,12 +744,6 @@ function abrirImagen(url: string) {
                                 <div class="text-xs mb-1"
                                     :class="esMio(msg) ? 'text-right text-muted-foreground' : 'text-left text-muted-foreground'">
                                     <strong>{{ msg.empresa_emisora?.nombreEmpresa || 'Empresa' }}</strong>
-                                    <span class="ml-1">
-                                        · {{ new Date(msg.created_at).toLocaleTimeString([], {
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        }) }}
-                                    </span>
                                 </div>
 
                                 <div class="px-3 py-2 rounded-2xl shadow-sm text-sm break-words border border-border"
@@ -717,6 +777,17 @@ function abrirImagen(url: string) {
                                     </div>
 
                                     <p v-else>{{ msg.contenido }}</p>
+
+                                    <div class="flex items-center justify-end gap-1 mt-1">
+                                        <span class="text-[10px] text-muted-foreground">
+                                            {{ new Date(msg.created_at).toLocaleTimeString([], {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }) }}
+                                        </span>
+                                        <CheckCheck v-if="esMio(msg) && msg.leido" class="w-3.5 h-3.5 text-blue-500" />
+                                        <Check v-else-if="esMio(msg)" class="w-3.5 h-3.5 text-muted-foreground" />
+                                    </div>
                                 </div>
                             </div>
                         </div>

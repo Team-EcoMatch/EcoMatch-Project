@@ -3,8 +3,8 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Leaf, ArrowLeft, Eye, EyeOff } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { Loader2, Leaf, ArrowLeft, Eye, EyeOff, Check, X, ShieldCheck } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
 
 const props = defineProps<{ email: string; token: string }>();
 
@@ -18,7 +18,51 @@ const form = useForm({
 const showPassword = ref(false);
 const showPasswordConfirmation = ref(false);
 
+const requisitos = computed(() => [
+    {
+        label: 'Mínimo 8 caracteres',
+        cumplido: form.password.length >= 8,
+    },
+    {
+        label: 'Una letra mayúscula (A-Z)',
+        cumplido: /[A-Z]/.test(form.password),
+    },
+    {
+        label: 'Una letra minúscula (a-z)',
+        cumplido: /[a-z]/.test(form.password),
+    },
+    {
+        label: 'Un número (0-9)',
+        cumplido: /[0-9]/.test(form.password),
+    },
+    {
+        label: 'Un carácter especial (!@#$%^&*)',
+        cumplido: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]/.test(form.password),
+    },
+]);
+
+const todosCumplidos = computed(() => requisitos.value.every(r => r.cumplido));
+
+const contrasenasCoinciden = computed(() => {
+    return form.password === form.password_confirmation && form.password_confirmation.length > 0;
+});
+
+const fuerzaContrasena = computed(() => {
+    let puntos = 0;
+    if (form.password.length >= 8) puntos++;
+    if (form.password.length >= 12) puntos++;
+    if (/[a-z]/.test(form.password)) puntos++;
+    if (/[A-Z]/.test(form.password)) puntos++;
+    if (/[0-9]/.test(form.password)) puntos++;
+    if (/[^a-zA-Z0-9]/.test(form.password)) puntos++;
+
+    if (puntos <= 2) return { nivel: 'Débil', color: 'bg-red-500', width: '33%', texto: 'text-red-500' };
+    if (puntos <= 4) return { nivel: 'Media', color: 'bg-amber-500', width: '66%', texto: 'text-amber-500' };
+    return { nivel: 'Fuerte', color: 'bg-blue-500', width: '100%', texto: 'text-blue-500' };
+});
+
 const submit = () => {
+    if (!todosCumplidos.value) return;
     form.post('/reset-password', {
         onFinish: () => form.reset('password', 'password_confirmation'),
     });
@@ -93,6 +137,32 @@ const submit = () => {
                                         <Eye v-else class="h-5 w-5" />
                                     </button>
                                 </div>
+
+                                <div v-if="form.password.length > 0" class="mt-3 space-y-2">
+                                    <div class="flex items-center gap-2">
+                                        <div class="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                                            <div class="h-full transition-all duration-300" :class="fuerzaContrasena.color" :style="{ width: fuerzaContrasena.width }"></div>
+                                        </div>
+                                        <span class="text-xs font-medium" :class="fuerzaContrasena.texto">{{ fuerzaContrasena.nivel }}</span>
+                                    </div>
+
+                                    <div class="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5">
+                                        <p class="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                                            <ShieldCheck class="w-3.5 h-3.5" />
+                                            Requisitos de la contraseña:
+                                        </p>
+                                        <div v-for="req in requisitos" :key="req.label" class="flex items-center gap-2">
+                                            <div class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-colors" :class="req.cumplido ? 'bg-blue-500' : 'bg-muted-foreground/20'">
+                                                <Check v-if="req.cumplido" class="h-2.5 w-2.5 text-white" />
+                                                <X v-else class="h-2.5 w-2.5 text-muted-foreground" />
+                                            </div>
+                                            <span class="text-xs transition-colors" :class="req.cumplido ? 'text-blue-500 font-medium' : 'text-muted-foreground'">
+                                                {{ req.label }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <p v-if="form.errors.password" class="text-xs text-destructive">{{ form.errors.password }}</p>
                             </div>
 
@@ -105,10 +175,21 @@ const submit = () => {
                                         <Eye v-else class="h-5 w-5" />
                                     </button>
                                 </div>
+
+                                <div v-if="form.password_confirmation.length > 0" class="flex items-center gap-2 mt-1">
+                                    <div class="flex h-4 w-4 items-center justify-center rounded-full transition-colors" :class="contrasenasCoinciden ? 'bg-blue-500' : 'bg-red-500'">
+                                        <Check v-if="contrasenasCoinciden" class="h-2.5 w-2.5 text-white" />
+                                        <X v-else class="h-2.5 w-2.5 text-white" />
+                                    </div>
+                                    <span class="text-xs" :class="contrasenasCoinciden ? 'text-blue-500' : 'text-red-500'">
+                                        {{ contrasenasCoinciden ? 'Las contraseñas coinciden' : 'Las contraseñas no coinciden' }}
+                                    </span>
+                                </div>
+
                                 <p v-if="form.errors.password_confirmation" class="text-xs text-destructive">{{ form.errors.password_confirmation }}</p>
                             </div>
 
-                            <Button type="submit" class="h-12 w-full rounded-lg shadow-lg transition-all duration-200" :disabled="form.processing">
+                            <Button type="submit" class="h-12 w-full rounded-lg shadow-lg transition-all duration-200" :disabled="form.processing || !todosCumplidos || !contrasenasCoinciden">
                                 <Loader2 v-if="form.processing" class="mr-2 h-4 w-4 animate-spin" />
                                 <span>Restablecer contraseña</span>
                             </Button>
