@@ -2,7 +2,6 @@
 
 namespace App\Events;
 
-use App\Models\Solicitud;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -14,7 +13,6 @@ class EmpresaDesbloqueada implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public function __construct(
-        public int $idsolicitud,
         public int $idempresa_bloqueadora,
         public int $idempresa_bloqueada,
         public string $nombreBloqueadora
@@ -23,14 +21,13 @@ class EmpresaDesbloqueada implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('chat.' . $this->idsolicitud),
+            new PrivateChannel('empresa.' . $this->idempresa_bloqueada),
         ];
     }
 
     public function broadcastWith(): array
     {
         return [
-            'idsolicitud' => $this->idsolicitud,
             'idempresa_bloqueadora' => $this->idempresa_bloqueadora,
             'idempresa_bloqueada' => $this->idempresa_bloqueada,
             'nombreBloqueadora' => $this->nombreBloqueadora,

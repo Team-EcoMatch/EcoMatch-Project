@@ -4,17 +4,17 @@ import { Head, router, usePage } from '@inertiajs/vue3';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Send, CheckCircle2, X, Paperclip, Ban, Unlock, FileText, Download } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -24,6 +24,7 @@ const props = defineProps<{
     empresaNombre: string;
     bloqueadoPorMi: boolean;
     bloqueadoHaciaMi: boolean;
+    motivoBloqueo: string | null;
     cloudName: string;
     uploadPreset: string;
 }>();
@@ -43,6 +44,9 @@ const bloqueadoHaciaMi = ref(props.bloqueadoHaciaMi);
 watch(() => props.bloqueadoPorMi, (v) => { bloqueadoPorMi.value = v; });
 watch(() => props.bloqueadoHaciaMi, (v) => { bloqueadoHaciaMi.value = v; });
 
+const showBloqueoModal = ref(false);
+const motivoBloqueoInput = ref('');
+
 const mensajes = ref<any[]>([...props.mensajes]);
 const newMessage = ref('');
 const mensajesContainer = ref<HTMLElement | null>(null);
@@ -51,6 +55,41 @@ const uploading = ref(false);
 const uploadProgress = ref(0);
 
 const noPuedeEnviarMensajes = computed(() => bloqueadoHaciaMi.value);
+
+const ARCHIVOS_PERMITIDOS = {
+    imagenes: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+    documentos: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv'],
+    comprimidos: ['zip', 'rar', '7z'],
+};
+
+const EXTENSIONES_PROHIBIDAS = [
+    'exe', 'msi', 'bat', 'cmd', 'sh', 'js', 'mjs',
+    'php', 'phtml', 'php3', 'php4', 'php5',
+    'py', 'rb', 'pl', 'cgi',
+    'apk', 'jar', 'class', 'dll', 'so', 'dylib',
+    'vbs', 'ps1', 'scr', 'com',
+    'html', 'htm', 'svg',
+];
+
+const TAMANOS_MAXIMOS = {
+    imagen: 5 * 1024 * 1024,
+    documento: 10 * 1024 * 1024,
+    comprimido: 10 * 1024 * 1024,
+    texto: 2 * 1024 * 1024,
+};
+
+const MAGIC_BYTES: Record<string, { pattern: string; tipos: string[] }> = {
+    pdf: { pattern: '25 50 44 46 2d', tipos: ['pdf'] },
+    png: { pattern: '89 50 4e 47 0d 0a 1a 0a', tipos: ['png'] },
+    jpg: { pattern: 'ff d8 ff', tipos: ['jpg', 'jpeg'] },
+    gif: { pattern: '47 49 46 38', tipos: ['gif'] },
+    webp: { pattern: '52 49 46 46', tipos: ['webp'] },
+    zip: { pattern: '50 4b 03 04', tipos: ['zip', 'docx', 'xlsx', 'pptx'] },
+    '7z': { pattern: '37 7a bc af 27 1c', tipos: ['7z'] },
+    rar4: { pattern: '52 61 72 21 1a 07 00', tipos: ['rar'] },
+    rar5: { pattern: '52 61 72 21 1a 07 01 00', tipos: ['rar'] },
+    office_legacy: { pattern: 'd0 cf 11 e0 a1 b1 1a e1', tipos: ['doc', 'xls', 'ppt'] },
+};
 
 function esMio(msg: any): boolean {
     return msg.idEmisora === props.empresaId;
@@ -92,6 +131,209 @@ function mostrarToast(msg: string, type: 'success' | 'error', duracion: number =
     }, duracion);
 }
 
+function leerMagicBytes(file: File, numBytes: number = 12): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const buffer = e.target?.result as ArrayBuffer;
+            if (!buffer) {
+                reject(new Error('No se pudo leer el archivo'));
+                return;
+            }
+            const bytes = new Uint8Array(buffer);
+            const hex = Array.from(bytes)
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join(' ');
+            resolve(hex);
+        };
+        reader.onerror = () => reject(new Error('Error leyendo el archivo'));
+        reader.readAsArrayBuffer(file.slice(0, numBytes));
+    });
+}
+
+async function detectarTipoReal(file: File): Promise<{ tipo: string; confiable: boolean }> {
+    try {
+        const hexBytes = await leerMagicBytes(file, 12);
+        const hexLower = hexBytes.toLowerCase();
+
+        if (hexLower.startsWith('52 49 46 46')) {
+            if (hexLower.includes('57 45 42 50')) {
+                return { tipo: 'webp', confiable: true };
+            }
+            return { tipo: 'riff-otro', confiable: false };
+        }
+
+        for (const [key, info] of Object.entries(MAGIC_BYTES)) {
+            if (key === 'webp') continue;
+            if (hexLower.startsWith(info.pattern)) {
+                if (key === 'zip') {
+                    return { tipo: 'zip_family', confiable: true };
+                }
+                return { tipo: key, confiable: true };
+            }
+        }
+
+        return { tipo: 'desconocido', confiable: false };
+    } catch (err) {
+        return { tipo: 'error_lectura', confiable: false };
+    }
+}
+
+async function validarConsistencia(file: File, extension: string): Promise<{ valido: boolean; error?: string }> {
+    const deteccion = await detectarTipoReal(file);
+
+    const extensionATipo: Record<string, string> = {
+        pdf: 'pdf',
+        png: 'png',
+        jpg: 'jpg',
+        jpeg: 'jpg',
+        gif: 'gif',
+        webp: 'webp',
+        zip: 'zip_family',
+        '7z': '7z',
+        rar: 'rar4',
+        docx: 'zip_family',
+        xlsx: 'zip_family',
+        pptx: 'zip_family',
+        doc: 'office_legacy',
+        xls: 'office_legacy',
+        ppt: 'office_legacy',
+    };
+
+    if (extension === 'txt' || extension === 'csv') {
+        return { valido: true };
+    }
+
+    const tipoEsperado = extensionATipo[extension];
+    if (!tipoEsperado) {
+        return { valido: false, error: `No se reconoce la extensión .${extension}` };
+    }
+
+    if (deteccion.tipo === tipoEsperado) {
+        return { valido: true };
+    }
+
+    if (tipoEsperado === 'zip_family' && deteccion.tipo === 'zip_family') {
+        return { valido: true };
+    }
+    if (tipoEsperado === 'office_legacy' && deteccion.tipo === 'office_legacy') {
+        return { valido: true };
+    }
+    if (extension === 'rar' && (deteccion.tipo === 'rar4' || deteccion.tipo === 'rar5')) {
+        return { valido: true };
+    }
+
+    return {
+        valido: false,
+        error: `El archivo dice ser .${extension} pero su contenido real es "${deteccion.tipo}". Posible archivo peligroso.`
+    };
+}
+
+function validarMimeType(file: File, extension: string): boolean {
+    const mime = file.type.toLowerCase();
+
+    const mimeEsperado: Record<string, string[]> = {
+        jpg: ['image/jpeg', 'image/jpg'],
+        jpeg: ['image/jpeg', 'image/jpg'],
+        png: ['image/png'],
+        gif: ['image/gif'],
+        webp: ['image/webp'],
+        pdf: ['application/pdf'],
+        doc: ['application/msword'],
+        docx: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        xls: ['application/vnd.ms-excel'],
+        xlsx: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+        ppt: ['application/vnd.ms-powerpoint'],
+        pptx: ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+        txt: ['text/plain'],
+        csv: ['text/csv', 'text/plain', 'application/vnd.ms-excel'],
+        zip: ['application/zip', 'application/x-zip-compressed', 'application/octet-stream'],
+        rar: ['application/x-rar-compressed', 'application/vnd.rar', 'application/octet-stream'],
+        '7z': ['application/x-7z-compressed', 'application/octet-stream'],
+    };
+
+    if (!mime || mime === 'application/octet-stream') {
+        return true;
+    }
+
+    const esperado = mimeEsperado[extension];
+    if (!esperado) return true;
+
+    return esperado.includes(mime);
+}
+
+async function validarArchivo(file: File): Promise<{ valido: boolean; error?: string; tipo?: string }> {
+    if (!file.name) {
+        return { valido: false, error: 'El archivo no es válido.' };
+    }
+
+    const extension = file.name.split('.').pop()?.toLowerCase() || '';
+
+    if (!extension) {
+        return { valido: false, error: 'El archivo no tiene extensión.' };
+    }
+
+    if (EXTENSIONES_PROHIBIDAS.includes(extension)) {
+        return { valido: false, error: `La extensión ".${extension}" no está permitida por seguridad.` };
+    }
+
+    let tipo = '';
+    let tamanoMaximo = 0;
+
+    if (ARCHIVOS_PERMITIDOS.imagenes.includes(extension)) {
+        tipo = 'imagen';
+        tamanoMaximo = TAMANOS_MAXIMOS.imagen;
+    } else if (ARCHIVOS_PERMITIDOS.documentos.includes(extension)) {
+        if (['txt', 'csv'].includes(extension)) {
+            tipo = 'texto';
+            tamanoMaximo = TAMANOS_MAXIMOS.texto;
+        } else {
+            tipo = 'documento';
+            tamanoMaximo = TAMANOS_MAXIMOS.documento;
+        }
+    } else if (ARCHIVOS_PERMITIDOS.comprimidos.includes(extension)) {
+        tipo = 'comprimido';
+        tamanoMaximo = TAMANOS_MAXIMOS.comprimido;
+    } else {
+        return {
+            valido: false,
+            error: `La extensión ".${extension}" no está permitida.`
+        };
+    }
+
+    if (file.size > tamanoMaximo) {
+        const mb = (tamanoMaximo / (1024 * 1024)).toFixed(0);
+        return {
+            valido: false,
+            error: `El archivo pesa ${formatSize(file.size)}. El máximo para ${tipo}s es ${mb}MB.`
+        };
+    }
+
+    if (file.name.length > 255) {
+        return { valido: false, error: 'El nombre del archivo es demasiado largo.' };
+    }
+
+    const consistencia = await validarConsistencia(file, extension);
+    if (!consistencia.valido) {
+        return {
+            valido: false,
+            error: consistencia.error || 'El archivo no coincide con su extensión.'
+        };
+    }
+
+    const mimeValido = validarMimeType(file, extension);
+    if (!mimeValido) {
+        return {
+            valido: false,
+            error: `El tipo MIME del archivo no coincide con su extensión.`
+        };
+    }
+
+    const tipoParaBackend = tipo === 'imagen' ? 'imagen' : 'archivo';
+
+    return { valido: true, tipo: tipoParaBackend };
+}
+
 onMounted(() => {
     if (message) {
         mostrarToast(message, 'success');
@@ -115,14 +357,19 @@ onMounted(() => {
                     mensajes.value.push(e.mensaje);
                     scrollToBottom();
                 }
-            })
+            });
+
+        window.Echo.private(`empresa.${props.empresaId}`)
             .listen('.empresa.bloqueada', (data: any) => {
                 if (data.idempresa_bloqueada === props.empresaId) {
                     bloqueadoHaciaMi.value = true;
+                    const motivoTexto = data.motivo && data.motivo !== 'Sin especificar'
+                        ? `\nMotivo: ${data.motivo}`
+                        : '';
                     mostrarToast(
-                        `🚫 ${data.nombreBloqueadora} te ha bloqueado. Ya no puedes enviar mensajes.`,
+                        `🚫 ${data.nombreBloqueadora} te ha bloqueado.${motivoTexto}`,
                         'error',
-                        5000
+                        8000
                     );
                     newMessage.value = '';
                 }
@@ -146,6 +393,7 @@ onBeforeUnmount(() => {
     }
     if (typeof window !== 'undefined' && window.Echo) {
         window.Echo.leave(`chat.${props.solicitud.idsolicitud}`);
+        window.Echo.leave(`empresa.${props.empresaId}`);
     }
 });
 
@@ -213,9 +461,9 @@ async function onFileSelected(event: Event) {
         return;
     }
 
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-        mostrarToast('El archivo no puede pesar más de 10MB', 'error');
+    const validacion = await validarArchivo(file);
+    if (!validacion.valido) {
+        mostrarToast(validacion.error || 'Archivo no válido', 'error', 5000);
         if (fileInput.value) fileInput.value.value = '';
         return;
     }
@@ -225,7 +473,7 @@ async function onFileSelected(event: Event) {
 
     try {
         const secure_url = await subirACloudinary(file);
-        const tipo = file.type.startsWith('image/') ? 'imagen' : 'archivo';
+        const tipo = validacion.tipo!;
 
         const mensajeLocal = crearMensajeLocal({
             contenido: '',
@@ -289,9 +537,15 @@ function enviarMensaje() {
     });
 }
 
-function bloquearEmpresa() {
-    router.post(`/chat/${props.solicitud.idsolicitud}/bloquear`, {}, {
+function confirmarBloqueo() {
+    showBloqueoModal.value = false;
+    router.post(`/chat/${props.solicitud.idsolicitud}/bloquear`, {
+        motivo: motivoBloqueoInput.value,
+    }, {
         preserveScroll: true,
+        onSuccess: () => {
+            motivoBloqueoInput.value = '';
+        },
     });
 }
 
@@ -339,7 +593,7 @@ function abrirImagen(url: string) {
                     </div>
                     <div class="flex-1 min-w-0">
                         <p class="font-semibold text-foreground">{{ toastType === 'success' ? 'Acción completada' : 'Aviso' }}</p>
-                        <p class="mt-1 text-sm text-muted-foreground">{{ toastMessage }}</p>
+                        <p class="mt-1 text-sm text-muted-foreground whitespace-pre-line">{{ toastMessage }}</p>
                     </div>
                     <button type="button" @click="showToast = false"
                         class="text-muted-foreground hover:text-foreground transition-colors">
@@ -355,29 +609,41 @@ function abrirImagen(url: string) {
                     <CardTitle class="flex justify-between items-center">
                         <span class="text-lg">💬 Chat - {{ solicitud.publicacion?.nombre || 'Intercambio' }}</span>
 
-                        <AlertDialog v-if="!bloqueadoPorMi">
-                            <AlertDialogTrigger as-child>
+                        <Dialog v-if="!bloqueadoPorMi" v-model:open="showBloqueoModal">
+                            <DialogTrigger as-child>
                                 <Button variant="ghost" size="sm" class="text-red-600 hover:text-red-700">
                                     <Ban class="w-4 h-4 mr-1" />
                                     Bloquear
                                 </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent class="bg-card border-border">
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>¿Bloquear empresa?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        La empresa no podrá enviarte mensajes. Puedes desbloquearla cuando quieras.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction @click="bloquearEmpresa"
-                                        class="bg-red-600 hover:bg-red-700 text-white">
+                            </DialogTrigger>
+                            <DialogContent class="bg-card border-border">
+                                <DialogHeader>
+                                    <DialogTitle>¿Bloquear empresa?</DialogTitle>
+                                    <DialogDescription>
+                                        La empresa no podrá enviarte mensajes ni solicitudes. Las solicitudes pendientes serán canceladas.
+                                    </DialogDescription>
+                                </DialogHeader>
+
+                                <div class="space-y-3 py-4">
+                                    <Label for="motivo">Motivo del bloqueo (opcional)</Label>
+                                    <Textarea id="motivo" v-model="motivoBloqueoInput"
+                                        placeholder="Ej: Comportamiento inapropiado, spam, etc."
+                                        class="min-h-[100px]" />
+                                    <p class="text-xs text-muted-foreground">
+                                        El motivo será visible para la empresa bloqueada.
+                                    </p>
+                                </div>
+
+                                <DialogFooter>
+                                    <Button variant="outline" @click="showBloqueoModal = false">
+                                        Cancelar
+                                    </Button>
+                                    <Button @click="confirmarBloqueo" class="bg-red-600 hover:bg-red-700 text-white">
                                         Sí, bloquear
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
 
                         <Button v-else variant="ghost" size="sm" @click="desbloquearEmpresa"
                             class="text-green-600 hover:text-green-700">
@@ -392,6 +658,7 @@ function abrirImagen(url: string) {
                         class="mb-4 p-3 rounded-md bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 text-sm text-center border border-amber-200 dark:border-amber-800">
                         <Ban class="w-4 h-4 inline mr-1" />
                         Esta empresa te ha bloqueado. No puedes enviar mensajes.
+                        <span v-if="motivoBloqueo" class="block mt-1 italic">Motivo: "{{ motivoBloqueo }}"</span>
                     </div>
                     <div v-else-if="bloqueadoPorMi"
                         class="mb-4 p-3 rounded-md bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 text-sm text-center border border-blue-200 dark:border-blue-800">
@@ -466,19 +733,17 @@ function abrirImagen(url: string) {
 
                     <div class="flex gap-2 items-center">
                         <input ref="fileInput" type="file" class="hidden" @change="onFileSelected"
-                            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.zip,.rar" />
+                            accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z" />
                         <Button variant="ghost" size="icon" @click="fileInput?.click()"
                             :disabled="uploading || noPuedeEnviarMensajes" class="shrink-0"
-                            title="Adjuntar archivo">
+                            title="Adjuntar archivo (máx 10MB)">
                             <Paperclip class="w-5 h-5" />
                         </Button>
 
-                        <Input v-model="newMessage" placeholder="Escribe un mensaje..."
-                            @keyup.enter="enviarMensaje" :disabled="noPuedeEnviarMensajes"
-                            class="flex-1" />
+                        <Input v-model="newMessage" placeholder="Escribe un mensaje..." @keyup.enter="enviarMensaje"
+                            :disabled="noPuedeEnviarMensajes" class="flex-1" />
 
-                        <Button @click="enviarMensaje"
-                            :disabled="!newMessage.trim() || noPuedeEnviarMensajes"
+                        <Button @click="enviarMensaje" :disabled="!newMessage.trim() || noPuedeEnviarMensajes"
                             class="bg-primary text-primary-foreground shrink-0">
                             <Send class="w-4 h-4" />
                         </Button>

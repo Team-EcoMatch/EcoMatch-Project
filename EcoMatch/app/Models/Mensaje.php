@@ -3,15 +3,26 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Mensaje extends Model
 {
     protected $table = 'mensajes';
+
     protected $primaryKey = 'idmensajes';
+
     public $timestamps = true;
 
     protected $fillable = [
-        'idsolicitud', 'idEmisora', 'contenido', 'leido','tipo','archivo_url','archivo_nombre','archivo_tamano', 
+        'idEmisora',
+        'contenido',
+        'tipo',
+        'archivo_url',
+        'archivo_nombre',
+        'archivo_tamano',
+        'leido',
+        'idsolicitud',
     ];
 
     protected $casts = [
@@ -19,17 +30,12 @@ class Mensaje extends Model
         'archivo_tamano' => 'integer',
     ];
 
-    public function solicitud()
+    public function solicitud(): BelongsTo
     {
         return $this->belongsTo(Solicitud::class, 'idsolicitud', 'idsolicitud');
     }
 
-    public function empresaEmisora()
-    {
-        return $this->belongsTo(Empresa::class, 'idEmisora', 'idempresa');
-    }
-
-    public function emisora()
+    public function empresa_emisora(): BelongsTo
     {
         return $this->belongsTo(Empresa::class, 'idEmisora', 'idempresa');
     }

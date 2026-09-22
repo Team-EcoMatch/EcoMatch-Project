@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\EmpresaBloqueada;
-use App\Events\EmpresaDesbloqueada;
 use App\Models\Mensaje;
 use App\Models\Bloqueo;
-use App\Models\Empresa;
+use App\Models\NotificacionBloqueo;
 use App\Models\Solicitud;
+use App\Models\Empresa;
+use App\Events\MensajeEnviado;
+use App\Events\EmpresaBloqueada;
+use App\Events\EmpresaDesbloqueada;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -20,26 +22,36 @@ class ChatController extends Controller
             ->findOrFail($solicitudId);
 
         $empresaId = Auth::user()->idempresa;
+        $empresaActual = Empresa::find($empresaId);
+
+        $otraEmpresaId = $solicitud->idEmpresaOrigen === $empresaId
+            ? $solicitud->idEmpresaDestino
+            : $solicitud->idEmpresaOrigen;
 
         $mensajes = Mensaje::where('idsolicitud', $solicitudId)
-            ->with('empresaEmisora')
+            ->with('empresa_emisora')
             ->orderBy('created_at', 'asc')
             ->get();
 
-        $bloqueadoPorMi = Bloqueo::where('idsolicitud', $solicitudId)
-            ->where('idempresa_bloqueadora', $empresaId)
-            ->exists();
+        $bloqueadoPorMi = Bloqueo::existeBloqueo($empresaId, $otraEmpresaId);
+        $bloqueadoHaciaMi = Bloqueo::existeBloqueo($otraEmpresaId, $empresaId);
 
-        $bloqueadoHaciaMi = Bloqueo::where('idsolicitud', $solicitudId)
-            ->where('idempresa_bloqueada', $empresaId)
-            ->exists();
+        $motivoBloqueo = null;
+        if ($bloqueadoHaciaMi) {
+            $bloqueo = Bloqueo::where('idempresa_bloqueadora', $otraEmpresaId)
+                ->where('idempresa_bloqueada', $empresaId)
+                ->first();
+            $motivoBloqueo = $bloqueo?->motivo;
+        }
 
         return Inertia::render('Chat/Index', [
             'solicitud' => $solicitud,
             'mensajes' => $mensajes,
             'empresaId' => $empresaId,
+            'empresaNombre' => $empresaActual?->nombreEmpresa ?? 'Mi empresa',
             'bloqueadoPorMi' => $bloqueadoPorMi,
             'bloqueadoHaciaMi' => $bloqueadoHaciaMi,
+            'motivoBloqueo' => $motivoBloqueo,
             'cloudName' => config('services.cloudinary.cloud_name'),
             'uploadPreset' => config('services.cloudinary.upload_preset'),
         ]);
@@ -49,17 +61,28 @@ class ChatController extends Controller
     {
         $empresaId = Auth::user()->idempresa;
 
-        $bloqueadoHaciaMi = Bloqueo::where('idsolicitud', $solicitudId)
-            ->where('idempresa_bloqueada', $empresaId)
-            ->exists();
+        $solicitud = Solicitud::findOrFail($solicitudId);
+        $otraEmpresaId = $solicitud->idEmpresaOrigen === $empresaId
+            ? $solicitud->idEmpresaDestino
+            : $solicitud->idEmpresaOrigen;
+
+        $bloqueadoHaciaMi = Bloqueo::existeBloqueo($otraEmpresaId, $empresaId);
 
         if ($bloqueadoHaciaMi) {
             return back()->with('error', 'No puedes enviar mensajes. Fuiste bloqueado.');
         }
 
+        $empresaParticipa = $solicitud->idEmpresaOrigen === $empresaId
+            || $solicitud->idEmpresaDestino === $empresaId;
+
+        if (!$empresaParticipa) {
+            abort(403, 'No tienes acceso a este chat.');
+        }
+
         if ($request->tipo === 'texto' || !$request->has('archivo_url')) {
             $request->validate([
                 'contenido' => 'required|string|max:1000',
+                'tipo' => 'in:texto',
             ]);
 
             $mensaje = Mensaje::create([
@@ -70,11 +93,28 @@ class ChatController extends Controller
             ]);
         } else {
             $request->validate([
-                'archivo_url' => 'required|string|max:500',
+                'archivo_url' => 'required|string|max:500|url',
                 'archivo_nombre' => 'required|string|max:255',
-                'archivo_tamano' => 'required|integer',
+                'archivo_tamano' => 'required|integer|min:1|max:11534336',
                 'tipo' => 'required|in:imagen,archivo',
+                'contenido' => 'nullable|string|max:1000',
             ]);
+
+            $cloudName = config('services.cloudinary.cloud_name');
+            if (!str_contains($request->archivo_url, "res.cloudinary.com/{$cloudName}/")) {
+                return back()->with('error', 'URL de archivo inválida.');
+            }
+
+            $extension = strtolower(pathinfo($request->archivo_nombre, PATHINFO_EXTENSION));
+            $extensionesPermitidas = [
+                'jpg', 'jpeg', 'png', 'gif', 'webp',
+                'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+                'txt', 'csv', 'zip', 'rar', '7z',
+            ];
+
+            if (!in_array($extension, $extensionesPermitidas)) {
+                return back()->with('error', "Extensión .{$extension} no permitida.");
+            }
 
             $mensaje = Mensaje::create([
                 'idsolicitud' => $solicitudId,
@@ -87,10 +127,101 @@ class ChatController extends Controller
             ]);
         }
 
-        $mensaje->load('empresaEmisora');
-        broadcast(new \App\Events\MensajeEnviado($mensaje, Solicitud::find($solicitudId)))->toOthers();
+        $mensaje->load('empresa_emisora');
+        broadcast(new MensajeEnviado($mensaje, $solicitud))->toOthers();
 
         return back()->with('message', 'Mensaje enviado.');
+    }
+
+    public function bloquear(Request $request, int $solicitudId)
+    {
+        $empresaId = Auth::user()->idempresa;
+
+        if (!$empresaId) {
+            return back()->with('error', 'Tu usuario no tiene empresa asignada.');
+        }
+
+        $request->validate([
+            'motivo' => 'nullable|string|max:500',
+        ]);
+
+        $solicitud = Solicitud::findOrFail($solicitudId);
+        $otraEmpresaId = $solicitud->idEmpresaOrigen === $empresaId
+            ? $solicitud->idEmpresaDestino
+            : $solicitud->idEmpresaOrigen;
+
+        $empresaBloqueadora = Empresa::find($empresaId);
+        $nombreBloqueadora = $empresaBloqueadora?->nombreEmpresa ?? 'Una empresa';
+        $motivo = $request->motivo ?: 'Sin especificar';
+
+        Bloqueo::firstOrCreate(
+            [
+                'idempresa_bloqueadora' => $empresaId,
+                'idempresa_bloqueada' => $otraEmpresaId,
+            ],
+            [
+                'idsolicitud' => $solicitudId,
+                'motivo' => $motivo,
+            ]
+        );
+
+        NotificacionBloqueo::create([
+            'idempresa_destinataria' => $otraEmpresaId,
+            'idempresa_bloqueadora' => $empresaId,
+            'motivo' => $motivo,
+            'idsolicitud' => $solicitudId,
+            'leida' => false,
+        ]);
+
+        Solicitud::where(function ($q) use ($empresaId, $otraEmpresaId) {
+            $q->where(function ($q1) use ($empresaId, $otraEmpresaId) {
+                $q1->where('idEmpresaOrigen', $empresaId)
+                    ->where('idEmpresaDestino', $otraEmpresaId);
+            })->orWhere(function ($q2) use ($empresaId, $otraEmpresaId) {
+                $q2->where('idEmpresaOrigen', $otraEmpresaId)
+                    ->where('idEmpresaDestino', $empresaId);
+            });
+        })
+            ->where('estado', 'Pendiente')
+            ->update(['estado' => 'Cancelada']);
+
+        broadcast(new EmpresaBloqueada(
+            $empresaId,
+            $otraEmpresaId,
+            $nombreBloqueadora,
+            $motivo
+        ));
+
+        return back()->with('message', 'Has bloqueado a la empresa. Todas las solicitudes pendientes fueron canceladas.');
+    }
+
+    public function desbloquear(Request $request, int $solicitudId)
+    {
+        $empresaId = Auth::user()->idempresa;
+
+        if (!$empresaId) {
+            return back()->with('error', 'Tu usuario no tiene empresa asignada.');
+        }
+
+        $solicitud = Solicitud::findOrFail($solicitudId);
+        $otraEmpresaId = $solicitud->idEmpresaOrigen === $empresaId
+            ? $solicitud->idEmpresaDestino
+            : $solicitud->idEmpresaOrigen;
+
+        Bloqueo::where('idempresa_bloqueadora', $empresaId)
+            ->where('idempresa_bloqueada', $otraEmpresaId)
+            ->delete();
+
+        $empresaDesbloqueadora = Empresa::find($empresaId);
+        $nombreDesbloqueadora = $empresaDesbloqueadora?->nombreEmpresa ?? 'Una empresa';
+
+        broadcast(new EmpresaDesbloqueada(
+            $empresaId,
+            $otraEmpresaId,
+            $nombreDesbloqueadora
+        ));
+
+        return back()->with('message', 'Has desbloqueado a la empresa. Ya pueden comunicarse.');
     }
 
     public function listaChats()
@@ -112,77 +243,5 @@ class ChatController extends Controller
             'chats' => $chats,
             'empresaId' => $empresaId,
         ]);
-    }
-
-    public function bloquear(Request $request, int $solicitudId)
-    {
-        $empresaId = Auth::user()->idempresa;
-
-        // ✅ Validar que el usuario tenga empresa asignada
-        if (!$empresaId) {
-            return back()->with('error', 'Tu usuario no tiene empresa asignada. Contacta al administrador.');
-        }
-
-        $solicitud = Solicitud::findOrFail($solicitudId);
-
-        // ✅ Validar que la empresa participe en la solicitud
-        $empresaParticipa = $solicitud->idEmpresaOrigen === $empresaId
-            || $solicitud->idEmpresaDestino === $empresaId;
-
-        if (!$empresaParticipa) {
-            abort(403, 'No tienes permiso para bloquear en este chat.');
-        }
-
-        $otraEmpresaId = $solicitud->idEmpresaOrigen === $empresaId
-            ? $solicitud->idEmpresaDestino
-            : $solicitud->idEmpresaOrigen;
-
-        Bloqueo::firstOrCreate([
-            'idsolicitud' => $solicitudId,
-            'idempresa_bloqueadora' => $empresaId,
-            'idempresa_bloqueada' => $otraEmpresaId,
-        ]);
-
-        $empresaBloqueadora = \App\Models\Empresa::find($empresaId);
-        $nombreBloqueadora = $empresaBloqueadora?->nombreEmpresa ?? 'Una empresa';
-
-        broadcast(new \App\Events\EmpresaBloqueada(
-            $solicitudId,
-            $empresaId,
-            $otraEmpresaId,
-            $nombreBloqueadora
-        ));
-
-        return back()->with('message', 'Has bloqueado a la empresa.');
-    }
-
-    public function desbloquear(Request $request, int $solicitudId)
-    {
-        $empresaId = Auth::user()->idempresa;
-
-        if (!$empresaId) {
-            return back()->with('error', 'Tu usuario no tiene empresa asignada.');
-        }
-
-        Bloqueo::where('idsolicitud', $solicitudId)
-            ->where('idempresa_bloqueadora', $empresaId)
-            ->delete();
-
-        $solicitud = Solicitud::findOrFail($solicitudId);
-        $otraEmpresaId = $solicitud->idEmpresaOrigen === $empresaId
-            ? $solicitud->idEmpresaDestino
-            : $solicitud->idEmpresaOrigen;
-
-        $empresaDesbloqueadora = \App\Models\Empresa::find($empresaId);
-        $nombreDesbloqueadora = $empresaDesbloqueadora?->nombreEmpresa ?? 'Una empresa';
-
-        broadcast(new \App\Events\EmpresaDesbloqueada(
-            $solicitudId,
-            $empresaId,
-            $otraEmpresaId,
-            $nombreDesbloqueadora
-        ));
-
-        return back()->with('message', 'Has desbloqueado a la empresa.');
     }
 }
