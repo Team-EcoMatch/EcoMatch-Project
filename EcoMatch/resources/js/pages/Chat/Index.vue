@@ -1,15 +1,32 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick, onBeforeUnmount } from 'vue';
+import { ref, watch, onMounted, nextTick, onBeforeUnmount, computed } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, CheckCircle2, X } from 'lucide-vue-next';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import { Send, CheckCircle2, X, Paperclip, Ban, Unlock, FileText, Download } from 'lucide-vue-next';
 
 const props = defineProps<{
     solicitud: any;
     mensajes: any[];
     empresaId: number;
+    empresaNombre: string;
+    bloqueadoPorMi: boolean;
+    bloqueadoHaciaMi: boolean;
+    motivoBloqueo: string | null;
+    cloudName: string;
+    uploadPreset: string;
 }>();
 
 const page = usePage();
@@ -19,11 +36,60 @@ const error = (page.props.errors as any)?.error ?? null;
 const showToast = ref(false);
 const toastMessage = ref('');
 const toastType = ref<'success' | 'error'>('success');
+const toastTimer = ref<number | null>(null);
+
+const bloqueadoPorMi = ref(props.bloqueadoPorMi);
+const bloqueadoHaciaMi = ref(props.bloqueadoHaciaMi);
+
+watch(() => props.bloqueadoPorMi, (v) => { bloqueadoPorMi.value = v; });
+watch(() => props.bloqueadoHaciaMi, (v) => { bloqueadoHaciaMi.value = v; });
+
+const showBloqueoModal = ref(false);
+const motivoBloqueoInput = ref('');
 
 const mensajes = ref<any[]>([...props.mensajes]);
-
 const newMessage = ref('');
 const mensajesContainer = ref<HTMLElement | null>(null);
+const fileInput = ref<HTMLInputElement | null>(null);
+const uploading = ref(false);
+const uploadProgress = ref(0);
+
+const noPuedeEnviarMensajes = computed(() => bloqueadoHaciaMi.value);
+
+const ARCHIVOS_PERMITIDOS = {
+    imagenes: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+    documentos: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv'],
+    comprimidos: ['zip', 'rar', '7z'],
+};
+
+const EXTENSIONES_PROHIBIDAS = [
+    'exe', 'msi', 'bat', 'cmd', 'sh', 'js', 'mjs',
+    'php', 'phtml', 'php3', 'php4', 'php5',
+    'py', 'rb', 'pl', 'cgi',
+    'apk', 'jar', 'class', 'dll', 'so', 'dylib',
+    'vbs', 'ps1', 'scr', 'com',
+    'html', 'htm', 'svg',
+];
+
+const TAMANOS_MAXIMOS = {
+    imagen: 5 * 1024 * 1024,
+    documento: 10 * 1024 * 1024,
+    comprimido: 10 * 1024 * 1024,
+    texto: 2 * 1024 * 1024,
+};
+
+const MAGIC_BYTES: Record<string, { pattern: string; tipos: string[] }> = {
+    pdf: { pattern: '25 50 44 46 2d', tipos: ['pdf'] },
+    png: { pattern: '89 50 4e 47 0d 0a 1a 0a', tipos: ['png'] },
+    jpg: { pattern: 'ff d8 ff', tipos: ['jpg', 'jpeg'] },
+    gif: { pattern: '47 49 46 38', tipos: ['gif'] },
+    webp: { pattern: '52 49 46 46', tipos: ['webp'] },
+    zip: { pattern: '50 4b 03 04', tipos: ['zip', 'docx', 'xlsx', 'pptx'] },
+    '7z': { pattern: '37 7a bc af 27 1c', tipos: ['7z'] },
+    rar4: { pattern: '52 61 72 21 1a 07 00', tipos: ['rar'] },
+    rar5: { pattern: '52 61 72 21 1a 07 01 00', tipos: ['rar'] },
+    office_legacy: { pattern: 'd0 cf 11 e0 a1 b1 1a e1', tipos: ['doc', 'xls', 'ppt'] },
+};
 
 function esMio(msg: any): boolean {
     return msg.idEmisora === props.empresaId;
@@ -37,19 +103,243 @@ function scrollToBottom() {
     });
 }
 
+watch(
+    () => props.mensajes,
+    (nuevosMensajes) => {
+        const temporales = mensajes.value.filter(m =>
+            String(m.idmensajes).startsWith('temp-') &&
+            !nuevosMensajes.some(nm =>
+                nm.archivo_url === m.archivo_url ||
+                (nm.contenido === m.contenido && nm.idEmisora === m.idEmisora)
+            )
+        );
+        mensajes.value = [...nuevosMensajes, ...temporales];
+        scrollToBottom();
+    },
+    { deep: true }
+);
+
+function mostrarToast(msg: string, type: 'success' | 'error', duracion: number = 3000) {
+    if (toastTimer.value) {
+        clearTimeout(toastTimer.value);
+    }
+    toastMessage.value = msg;
+    toastType.value = type;
+    showToast.value = true;
+    toastTimer.value = window.setTimeout(() => {
+        showToast.value = false;
+    }, duracion);
+}
+
+function leerMagicBytes(file: File, numBytes: number = 12): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const buffer = e.target?.result as ArrayBuffer;
+            if (!buffer) {
+                reject(new Error('No se pudo leer el archivo'));
+                return;
+            }
+            const bytes = new Uint8Array(buffer);
+            const hex = Array.from(bytes)
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join(' ');
+            resolve(hex);
+        };
+        reader.onerror = () => reject(new Error('Error leyendo el archivo'));
+        reader.readAsArrayBuffer(file.slice(0, numBytes));
+    });
+}
+
+async function detectarTipoReal(file: File): Promise<{ tipo: string; confiable: boolean }> {
+    try {
+        const hexBytes = await leerMagicBytes(file, 12);
+        const hexLower = hexBytes.toLowerCase();
+
+        if (hexLower.startsWith('52 49 46 46')) {
+            if (hexLower.includes('57 45 42 50')) {
+                return { tipo: 'webp', confiable: true };
+            }
+            return { tipo: 'riff-otro', confiable: false };
+        }
+
+        for (const [key, info] of Object.entries(MAGIC_BYTES)) {
+            if (key === 'webp') continue;
+            if (hexLower.startsWith(info.pattern)) {
+                if (key === 'zip') {
+                    return { tipo: 'zip_family', confiable: true };
+                }
+                return { tipo: key, confiable: true };
+            }
+        }
+
+        return { tipo: 'desconocido', confiable: false };
+    } catch (err) {
+        return { tipo: 'error_lectura', confiable: false };
+    }
+}
+
+async function validarConsistencia(file: File, extension: string): Promise<{ valido: boolean; error?: string }> {
+    const deteccion = await detectarTipoReal(file);
+
+    const extensionATipo: Record<string, string> = {
+        pdf: 'pdf',
+        png: 'png',
+        jpg: 'jpg',
+        jpeg: 'jpg',
+        gif: 'gif',
+        webp: 'webp',
+        zip: 'zip_family',
+        '7z': '7z',
+        rar: 'rar4',
+        docx: 'zip_family',
+        xlsx: 'zip_family',
+        pptx: 'zip_family',
+        doc: 'office_legacy',
+        xls: 'office_legacy',
+        ppt: 'office_legacy',
+    };
+
+    if (extension === 'txt' || extension === 'csv') {
+        return { valido: true };
+    }
+
+    const tipoEsperado = extensionATipo[extension];
+    if (!tipoEsperado) {
+        return { valido: false, error: `No se reconoce la extensión .${extension}` };
+    }
+
+    if (deteccion.tipo === tipoEsperado) {
+        return { valido: true };
+    }
+
+    if (tipoEsperado === 'zip_family' && deteccion.tipo === 'zip_family') {
+        return { valido: true };
+    }
+    if (tipoEsperado === 'office_legacy' && deteccion.tipo === 'office_legacy') {
+        return { valido: true };
+    }
+    if (extension === 'rar' && (deteccion.tipo === 'rar4' || deteccion.tipo === 'rar5')) {
+        return { valido: true };
+    }
+
+    return {
+        valido: false,
+        error: `El archivo dice ser .${extension} pero su contenido real es "${deteccion.tipo}". Posible archivo peligroso.`
+    };
+}
+
+function validarMimeType(file: File, extension: string): boolean {
+    const mime = file.type.toLowerCase();
+
+    const mimeEsperado: Record<string, string[]> = {
+        jpg: ['image/jpeg', 'image/jpg'],
+        jpeg: ['image/jpeg', 'image/jpg'],
+        png: ['image/png'],
+        gif: ['image/gif'],
+        webp: ['image/webp'],
+        pdf: ['application/pdf'],
+        doc: ['application/msword'],
+        docx: ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        xls: ['application/vnd.ms-excel'],
+        xlsx: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+        ppt: ['application/vnd.ms-powerpoint'],
+        pptx: ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+        txt: ['text/plain'],
+        csv: ['text/csv', 'text/plain', 'application/vnd.ms-excel'],
+        zip: ['application/zip', 'application/x-zip-compressed', 'application/octet-stream'],
+        rar: ['application/x-rar-compressed', 'application/vnd.rar', 'application/octet-stream'],
+        '7z': ['application/x-7z-compressed', 'application/octet-stream'],
+    };
+
+    if (!mime || mime === 'application/octet-stream') {
+        return true;
+    }
+
+    const esperado = mimeEsperado[extension];
+    if (!esperado) return true;
+
+    return esperado.includes(mime);
+}
+
+async function validarArchivo(file: File): Promise<{ valido: boolean; error?: string; tipo?: string }> {
+    if (!file.name) {
+        return { valido: false, error: 'El archivo no es válido.' };
+    }
+
+    const extension = file.name.split('.').pop()?.toLowerCase() || '';
+
+    if (!extension) {
+        return { valido: false, error: 'El archivo no tiene extensión.' };
+    }
+
+    if (EXTENSIONES_PROHIBIDAS.includes(extension)) {
+        return { valido: false, error: `La extensión ".${extension}" no está permitida por seguridad.` };
+    }
+
+    let tipo = '';
+    let tamanoMaximo = 0;
+
+    if (ARCHIVOS_PERMITIDOS.imagenes.includes(extension)) {
+        tipo = 'imagen';
+        tamanoMaximo = TAMANOS_MAXIMOS.imagen;
+    } else if (ARCHIVOS_PERMITIDOS.documentos.includes(extension)) {
+        if (['txt', 'csv'].includes(extension)) {
+            tipo = 'texto';
+            tamanoMaximo = TAMANOS_MAXIMOS.texto;
+        } else {
+            tipo = 'documento';
+            tamanoMaximo = TAMANOS_MAXIMOS.documento;
+        }
+    } else if (ARCHIVOS_PERMITIDOS.comprimidos.includes(extension)) {
+        tipo = 'comprimido';
+        tamanoMaximo = TAMANOS_MAXIMOS.comprimido;
+    } else {
+        return {
+            valido: false,
+            error: `La extensión ".${extension}" no está permitida.`
+        };
+    }
+
+    if (file.size > tamanoMaximo) {
+        const mb = (tamanoMaximo / (1024 * 1024)).toFixed(0);
+        return {
+            valido: false,
+            error: `El archivo pesa ${formatSize(file.size)}. El máximo para ${tipo}s es ${mb}MB.`
+        };
+    }
+
+    if (file.name.length > 255) {
+        return { valido: false, error: 'El nombre del archivo es demasiado largo.' };
+    }
+
+    const consistencia = await validarConsistencia(file, extension);
+    if (!consistencia.valido) {
+        return {
+            valido: false,
+            error: consistencia.error || 'El archivo no coincide con su extensión.'
+        };
+    }
+
+    const mimeValido = validarMimeType(file, extension);
+    if (!mimeValido) {
+        return {
+            valido: false,
+            error: `El tipo MIME del archivo no coincide con su extensión.`
+        };
+    }
+
+    const tipoParaBackend = tipo === 'imagen' ? 'imagen' : 'archivo';
+
+    return { valido: true, tipo: tipoParaBackend };
+}
+
 onMounted(() => {
-    // Toasts
     if (message) {
-        toastMessage.value = message;
-        toastType.value = 'success';
-        showToast.value = true;
-        setTimeout(() => { showToast.value = false; }, 3000);
+        mostrarToast(message, 'success');
     }
     if (error) {
-        toastMessage.value = error;
-        toastType.value = 'error';
-        showToast.value = true;
-        setTimeout(() => { showToast.value = false; }, 3000);
+        mostrarToast(error, 'error');
     }
 
     scrollToBottom();
@@ -57,53 +347,236 @@ onMounted(() => {
     if (typeof window !== 'undefined' && window.Echo) {
         window.Echo.private(`chat.${props.solicitud.idsolicitud}`)
             .listen('.mensaje.enviado', (e: any) => {
-                const existe = mensajes.value.some(m => m.idmensajes === e.mensaje.idmensajes);
+                const existe = mensajes.value.some(m =>
+                    m.idmensajes === e.mensaje.idmensajes ||
+                    (String(m.idmensajes).startsWith('temp-') &&
+                        m.contenido === e.mensaje.contenido &&
+                        m.idEmisora === e.mensaje.idEmisora)
+                );
                 if (!existe) {
                     mensajes.value.push(e.mensaje);
                     scrollToBottom();
+                }
+            });
+
+        window.Echo.private(`empresa.${props.empresaId}`)
+            .listen('.empresa.bloqueada', (data: any) => {
+                if (data.idempresa_bloqueada === props.empresaId) {
+                    bloqueadoHaciaMi.value = true;
+                    const motivoTexto = data.motivo && data.motivo !== 'Sin especificar'
+                        ? `\nMotivo: ${data.motivo}`
+                        : '';
+                    mostrarToast(
+                        `🚫 ${data.nombreBloqueadora} te ha bloqueado.${motivoTexto}`,
+                        'error',
+                        8000
+                    );
+                    newMessage.value = '';
+                }
+            })
+            .listen('.empresa.desbloqueada', (data: any) => {
+                if (data.idempresa_bloqueada === props.empresaId) {
+                    bloqueadoHaciaMi.value = false;
+                    mostrarToast(
+                        `✅ ${data.nombreBloqueadora} te ha desbloqueado. Ya puedes enviar mensajes.`,
+                        'success',
+                        5000
+                    );
                 }
             });
     }
 });
 
 onBeforeUnmount(() => {
+    if (toastTimer.value) {
+        clearTimeout(toastTimer.value);
+    }
     if (typeof window !== 'undefined' && window.Echo) {
         window.Echo.leave(`chat.${props.solicitud.idsolicitud}`);
+        window.Echo.leave(`empresa.${props.empresaId}`);
     }
 });
 
+async function subirACloudinary(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', props.uploadPreset);
+    formData.append('folder', `chat/${props.solicitud.idsolicitud}`);
+
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `https://api.cloudinary.com/v1_1/${props.cloudName}/auto/upload`);
+
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+                uploadProgress.value = Math.round((e.loaded / e.total) * 100);
+            }
+        };
+
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                const response = JSON.parse(xhr.responseText);
+                resolve(response.secure_url);
+            } else {
+                reject(new Error('Error subiendo archivo'));
+            }
+        };
+
+        xhr.onerror = () => reject(new Error('Error de red'));
+        xhr.send(formData);
+    });
+}
+
+function crearMensajeLocal(datos: {
+    contenido: string;
+    tipo: string;
+    archivo_url?: string;
+    archivo_nombre?: string;
+    archivo_tamano?: number;
+}): any {
+    return {
+        idmensajes: 'temp-' + Date.now(),
+        idEmisora: props.empresaId,
+        contenido: datos.contenido,
+        tipo: datos.tipo,
+        archivo_url: datos.archivo_url || null,
+        archivo_nombre: datos.archivo_nombre || null,
+        archivo_tamano: datos.archivo_tamano || null,
+        created_at: new Date().toISOString(),
+        empresa_emisora: {
+            idempresa: props.empresaId,
+            nombreEmpresa: props.empresaNombre
+        }
+    };
+}
+
+async function onFileSelected(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) return;
+
+    if (noPuedeEnviarMensajes.value) {
+        mostrarToast('No puedes enviar archivos. Fuiste bloqueado.', 'error');
+        if (fileInput.value) fileInput.value.value = '';
+        return;
+    }
+
+    const validacion = await validarArchivo(file);
+    if (!validacion.valido) {
+        mostrarToast(validacion.error || 'Archivo no válido', 'error', 5000);
+        if (fileInput.value) fileInput.value.value = '';
+        return;
+    }
+
+    uploading.value = true;
+    uploadProgress.value = 0;
+
+    try {
+        const secure_url = await subirACloudinary(file);
+        const tipo = validacion.tipo!;
+
+        const mensajeLocal = crearMensajeLocal({
+            contenido: '',
+            tipo,
+            archivo_url: secure_url,
+            archivo_nombre: file.name,
+            archivo_tamano: file.size,
+        });
+        mensajes.value.push(mensajeLocal);
+        scrollToBottom();
+
+        router.post(`/chat/${props.solicitud.idsolicitud}`, {
+            contenido: '',
+            tipo,
+            archivo_url: secure_url,
+            archivo_nombre: file.name,
+            archivo_tamano: file.size,
+        }, {
+            preserveScroll: true,
+            onError: (errors) => {
+                mensajes.value = mensajes.value.filter(m => m.idmensajes !== mensajeLocal.idmensajes);
+                mostrarToast('Error: ' + Object.values(errors).join(', '), 'error');
+            }
+        });
+    } catch (err) {
+        mostrarToast('Error al subir el archivo', 'error');
+    } finally {
+        uploading.value = false;
+        uploadProgress.value = 0;
+        if (fileInput.value) fileInput.value.value = '';
+    }
+}
+
 function enviarMensaje() {
+    if (noPuedeEnviarMensajes.value) {
+        mostrarToast('No puedes enviar mensajes. Fuiste bloqueado.', 'error');
+        return;
+    }
     if (!newMessage.value.trim()) return;
 
     const contenido = newMessage.value;
     newMessage.value = '';
 
-    router.post(`/chat/${props.solicitud.idsolicitud}`, { contenido }, {
+    const mensajeLocal = crearMensajeLocal({
+        contenido,
+        tipo: 'texto',
+    });
+    mensajes.value.push(mensajeLocal);
+    scrollToBottom();
+
+    router.post(`/chat/${props.solicitud.idsolicitud}`, {
+        contenido,
+        tipo: 'texto'
+    }, {
         preserveScroll: true,
-        onSuccess: () => {
-            // El mensaje llegará por WebSocket al otro usuario.
-            // Para el emisor, lo agregamos manualmente aquí.
-            // (Opcional: si no usas ->toOthers(), llegará también por WS y este paso se evita)
-        },
         onError: (errors) => {
-            const msg = Object.values(errors).flat().join('\n');
-            toastMessage.value = 'Error: ' + msg;
-            toastType.value = 'error';
-            showToast.value = true;
-            setTimeout(() => { showToast.value = false; }, 3000);
-            // Devolver el texto para que el usuario no pierda lo que escribió
+            mensajes.value = mensajes.value.filter(m => m.idmensajes !== mensajeLocal.idmensajes);
+            mostrarToast('Error: ' + Object.values(errors).flat().join('\n'), 'error');
             newMessage.value = contenido;
         }
     });
 }
+
+function confirmarBloqueo() {
+    showBloqueoModal.value = false;
+    router.post(`/chat/${props.solicitud.idsolicitud}/bloquear`, {
+        motivo: motivoBloqueoInput.value,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            motivoBloqueoInput.value = '';
+        },
+    });
+}
+
+function desbloquearEmpresa() {
+    router.post(`/chat/${props.solicitud.idsolicitud}/desbloquear`, {}, {
+        preserveScroll: true,
+    });
+}
+
+function formatSize(bytes: number): string {
+    if (!bytes) return '0 B';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+function getExtension(nombre: string): string {
+    return nombre.split('.').pop()?.toUpperCase() || 'FILE';
+}
+
+function abrirImagen(url: string) {
+    if (typeof window !== 'undefined') {
+        window.open(url, '_blank');
+    }
+}
 </script>
 
 <template>
-
-    <Head title="Chat" />
-
     <div class="p-6 bg-background min-h-screen text-foreground">
-        <!-- Toast -->
+        <Head title="Chat" />
+
         <Transition enter-active-class="transition-all duration-300 ease-out"
             enter-from-class="opacity-0 translate-y-[-10px] scale-95"
             enter-to-class="opacity-100 translate-y-0 scale-100"
@@ -119,19 +592,13 @@ function enviarMensaje() {
                             :class="toastType === 'success' ? 'text-green-500' : 'text-red-500'" />
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="font-semibold text-foreground">{{ toastType === 'success' ? 'Acción completada' :
-                            'Error' }}</p>
-                        <p class="mt-1 text-sm text-muted-foreground">{{ toastMessage }}</p>
+                        <p class="font-semibold text-foreground">{{ toastType === 'success' ? 'Acción completada' : 'Aviso' }}</p>
+                        <p class="mt-1 text-sm text-muted-foreground whitespace-pre-line">{{ toastMessage }}</p>
                     </div>
                     <button type="button" @click="showToast = false"
                         class="text-muted-foreground hover:text-foreground transition-colors">
                         <X class="h-4 w-4" />
                     </button>
-                </div>
-                <div class="h-1 bg-muted">
-                    <div class="h-full" :class="toastType === 'success' ? 'bg-green-500' : 'bg-red-500'"
-                        :style="{ animation: 'toast-progress 3s linear forwards' }">
-                    </div>
                 </div>
             </div>
         </Transition>
@@ -140,16 +607,64 @@ function enviarMensaje() {
             <Card>
                 <CardHeader>
                     <CardTitle class="flex justify-between items-center">
-                        <span>💬 Chat - {{ solicitud.publicacion?.nombre || 'Intercambio' }}</span>
-                        <span class="text-sm font-normal text-muted-foreground">
-                            {{ solicitud.empresa_origen?.nombreEmpresa || 'Empresa 1' }}
-                            ↔
-                            {{ solicitud.empresa_destino?.nombreEmpresa || 'Empresa 2' }}
-                        </span>
+                        <span class="text-lg">💬 Chat - {{ solicitud.publicacion?.nombre || 'Intercambio' }}</span>
+
+                        <Dialog v-if="!bloqueadoPorMi" v-model:open="showBloqueoModal">
+                            <DialogTrigger as-child>
+                                <Button variant="ghost" size="sm" class="text-red-600 hover:text-red-700">
+                                    <Ban class="w-4 h-4 mr-1" />
+                                    Bloquear
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent class="bg-card border-border">
+                                <DialogHeader>
+                                    <DialogTitle>¿Bloquear empresa?</DialogTitle>
+                                    <DialogDescription>
+                                        La empresa no podrá enviarte mensajes ni solicitudes. Las solicitudes pendientes serán canceladas.
+                                    </DialogDescription>
+                                </DialogHeader>
+
+                                <div class="space-y-3 py-4">
+                                    <Label for="motivo">Motivo del bloqueo (opcional)</Label>
+                                    <Textarea id="motivo" v-model="motivoBloqueoInput"
+                                        placeholder="Ej: Comportamiento inapropiado, spam, etc."
+                                        class="min-h-[100px]" />
+                                    <p class="text-xs text-muted-foreground">
+                                        El motivo será visible para la empresa bloqueada.
+                                    </p>
+                                </div>
+
+                                <DialogFooter>
+                                    <Button variant="outline" @click="showBloqueoModal = false">
+                                        Cancelar
+                                    </Button>
+                                    <Button @click="confirmarBloqueo" class="bg-red-600 hover:bg-red-700 text-white">
+                                        Sí, bloquear
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+
+                        <Button v-else variant="ghost" size="sm" @click="desbloquearEmpresa"
+                            class="text-green-600 hover:text-green-700">
+                            <Unlock class="w-4 h-4 mr-1" />
+                            Desbloquear
+                        </Button>
                     </CardTitle>
                 </CardHeader>
+
                 <CardContent>
-                    <!-- Mensajes estilo WhatsApp -->
+                    <div v-if="bloqueadoHaciaMi"
+                        class="mb-4 p-3 rounded-md bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 text-sm text-center border border-amber-200 dark:border-amber-800">
+                        <Ban class="w-4 h-4 inline mr-1" />
+                        Esta empresa te ha bloqueado. No puedes enviar mensajes.
+                        <span v-if="motivoBloqueo" class="block mt-1 italic">Motivo: "{{ motivoBloqueo }}"</span>
+                    </div>
+                    <div v-else-if="bloqueadoPorMi"
+                        class="mb-4 p-3 rounded-md bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 text-sm text-center border border-blue-200 dark:border-blue-800">
+                        Has bloqueado a esta empresa. Desbloquéala para reanudar la conversación.
+                    </div>
+
                     <div ref="mensajesContainer"
                         class="h-96 overflow-y-auto border border-border rounded-md p-4 mb-4 bg-muted/10">
                         <div v-if="mensajes.length === 0" class="text-center text-muted-foreground py-8">
@@ -159,37 +674,78 @@ function enviarMensaje() {
                         <div v-for="msg in mensajes" :key="msg.idmensajes" class="mb-3 flex"
                             :class="esMio(msg) ? 'justify-end' : 'justify-start'">
                             <div class="max-w-[75%]">
-                                <!-- Nombre + hora -->
                                 <div class="text-xs mb-1"
                                     :class="esMio(msg) ? 'text-right text-muted-foreground' : 'text-left text-muted-foreground'">
-                                    <strong>{{ (msg.empresa_emisora || msg.empresaEmisora || msg.emisora)?.nombreEmpresa
-                                        || 'Empresa' }}</strong>
+                                    <strong>{{ msg.empresa_emisora?.nombreEmpresa || 'Empresa' }}</strong>
                                     <span class="ml-1">
                                         · {{ new Date(msg.created_at).toLocaleTimeString([], {
-                                            hour: '2-digit', minute:
-                                                '2-digit'
+                                            hour: '2-digit',
+                                            minute: '2-digit'
                                         }) }}
                                     </span>
                                 </div>
-                                <!-- Burbuja -->
 
                                 <div class="px-3 py-2 rounded-2xl shadow-sm text-sm break-words border border-border"
                                     :class="esMio(msg)
                                         ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/50 dark:text-emerald-100 rounded-br-sm'
                                         : 'bg-muted text-foreground dark:bg-muted/70 rounded-bl-sm'">
-                                    {{ msg.contenido }}
+
+                                    <div v-if="msg.tipo === 'imagen'">
+                                        <img :src="msg.archivo_url" :alt="msg.archivo_nombre"
+                                            class="rounded-lg max-w-full max-h-72 object-cover mb-2 cursor-pointer"
+                                            @click="abrirImagen(msg.archivo_url)" />
+                                        <p v-if="msg.contenido" class="mt-1">{{ msg.contenido }}</p>
+                                    </div>
+
+                                    <div v-else-if="msg.tipo === 'archivo'"
+                                        class="flex items-center gap-3 min-w-[200px]">
+                                        <div
+                                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                            <FileText class="h-5 w-5 text-primary" />
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="font-medium truncate">{{ msg.archivo_nombre }}</p>
+                                            <p class="text-xs text-muted-foreground">
+                                                {{ getExtension(msg.archivo_nombre) }} · {{ formatSize(msg.archivo_tamano || 0) }}
+                                            </p>
+                                        </div>
+                                        <a :href="msg.archivo_url" target="_blank" download
+                                            class="text-primary hover:text-primary/80">
+                                            <Download class="w-4 h-4" />
+                                        </a>
+                                    </div>
+
+                                    <p v-else>{{ msg.contenido }}</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Formulario -->
-                    <div class="flex gap-2">
+                    <div v-if="uploading" class="mb-2">
+                        <div class="h-1 bg-muted rounded-full overflow-hidden">
+                            <div class="h-full bg-primary transition-all"
+                                :style="{ width: uploadProgress + '%' }"></div>
+                        </div>
+                        <p class="text-xs text-muted-foreground mt-1 text-center">
+                            Subiendo... {{ uploadProgress }}%
+                        </p>
+                    </div>
+
+                    <div class="flex gap-2 items-center">
+                        <input ref="fileInput" type="file" class="hidden" @change="onFileSelected"
+                            accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z" />
+                        <Button variant="ghost" size="icon" @click="fileInput?.click()"
+                            :disabled="uploading || noPuedeEnviarMensajes" class="shrink-0"
+                            title="Adjuntar archivo (máx 10MB)">
+                            <Paperclip class="w-5 h-5" />
+                        </Button>
+
                         <Input v-model="newMessage" placeholder="Escribe un mensaje..." @keyup.enter="enviarMensaje"
-                            class="flex-1" />
-                        <Button @click="enviarMensaje" class="bg-primary text-primary-foreground">
-                            <Send class="w-4 h-4 mr-2" />
-                            Enviar
+                            :disabled="noPuedeEnviarMensajes" class="flex-1" />
+
+                        <Button @click="enviarMensaje" :disabled="!newMessage.trim() || noPuedeEnviarMensajes"
+                            class="bg-primary text-primary-foreground shrink-0">
+                            <Send class="w-4 h-4" />
                         </Button>
                     </div>
                 </CardContent>
@@ -197,16 +753,3 @@ function enviarMensaje() {
         </div>
     </div>
 </template>
-<!--comentario-->
-
-<style>
-@keyframes toast-progress {
-    from {
-        width: 100%;
-    }
-
-    to {
-        width: 0%;
-    }
-}
-</style>

@@ -7,6 +7,7 @@ import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import TeamSwitcher from '@/components/TeamSwitcher.vue';
+import NotificacionesBloqueo from '@/components/NotificacionesBloqueo.vue';
 import {
     Sidebar, SidebarContent, SidebarFooter,
     SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
@@ -63,6 +64,8 @@ watch(
 </script>
 
 <template>
+    <NotificacionesBloqueo />
+
     <Transition enter-active-class="transition-all duration-300 ease-out"
         enter-from-class="opacity-0 translate-y-[-10px] scale-95" enter-to-class="opacity-100 translate-y-0 scale-100"
         leave-active-class="transition-all duration-300 ease-in" leave-from-class="opacity-100 translate-y-0 scale-100"

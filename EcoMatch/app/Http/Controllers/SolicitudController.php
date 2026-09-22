@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Solicitud;
 use App\Models\Publicacion;
+use App\Models\Bloqueo;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -17,7 +18,7 @@ class SolicitudController extends Controller
         $recibidas = Solicitud::with([
             'publicacion',
             'publicacion.empresa',
-            'empresaOrigen'
+            'empresa_origen'
         ])
             ->where('idEmpresaDestino', $empresaId)
             ->orderBy('created_at', 'desc')
@@ -26,7 +27,7 @@ class SolicitudController extends Controller
         $enviadas = Solicitud::with([
             'publicacion',
             'publicacion.empresa',
-            'empresaDestino'
+            'empresa_destino'
         ])
             ->where('idEmpresaOrigen', $empresaId)
             ->orderBy('created_at', 'desc')
@@ -35,7 +36,6 @@ class SolicitudController extends Controller
         return Inertia::render('Solicitudes/Index', [
             'recibidas' => $recibidas,
             'enviadas'  => $enviadas,
-
         ]);
     }
 
@@ -43,7 +43,6 @@ class SolicitudController extends Controller
     {
         $user = Auth::user();
 
-        // Validar que el usuario tenga empresa
         if (is_null($user->idempresa)) {
             return redirect()->back()->withErrors([
                 'error' => 'No tienes una empresa asociada. No puedes enviar solicitudes.'
@@ -58,20 +57,31 @@ class SolicitudController extends Controller
 
         $publicacion = Publicacion::findOrFail($validated['idpublicaciones']);
         $empresaOrigen = $user->idempresa;
+        $empresaDestino = $publicacion->idempresa;
 
-        // No permitir solicitar material propio
-        if ($empresaOrigen === $publicacion->idempresa) {
+        if ($empresaOrigen === $empresaDestino) {
             return redirect()->back()->withErrors([
                 'error' => 'No puedes solicitar tu propio material.'
             ]);
         }
-        //validacion  para verificar stock disponble
+
         if ($publicacion->cantidad < $validated['cantidad']) {
             return redirect()->back()->withErrors([
                 'error' => "No hay suficiente stock disponible. Disponible: {$publicacion->cantidad} {$publicacion->unidadMedida}, Solicitado: {$validated['cantidad']} {$publicacion->unidadMedida}."
             ]);
         }
-        // Verificar duplicado
+
+        $bloqueada = Bloqueo::where(function ($q) use ($empresaOrigen, $empresaDestino) {
+            $q->where('idempresa_bloqueadora', $empresaDestino)
+                ->where('idempresa_bloqueada', $empresaOrigen);
+        })->exists();
+
+        if ($bloqueada) {
+            return redirect()->back()->withErrors([
+                'error' => 'No puedes enviar solicitudes a esta empresa. Has sido bloqueado.'
+            ]);
+        }
+
         $existe = Solicitud::where('idpublicaciones', $publicacion->idpublicaciones)
             ->where('idEmpresaOrigen', $empresaOrigen)
             ->where('estado', 'Pendiente')
@@ -86,8 +96,8 @@ class SolicitudController extends Controller
         Solicitud::create([
             'idpublicaciones'  => $publicacion->idpublicaciones,
             'idEmpresaOrigen'  => $empresaOrigen,
-            'idEmpresaDestino' => $publicacion->idempresa,
-            'user_id'          => Auth::id(),  
+            'idEmpresaDestino' => $empresaDestino,
+            'user_id'          => Auth::id(),
             'mensaje'          => $validated['mensaje'],
             'cantidad'         => $validated['cantidad'],
             'estado'           => 'Pendiente'
@@ -95,6 +105,7 @@ class SolicitudController extends Controller
 
         return redirect()->back()->with('message', 'Solicitud enviada correctamente.');
     }
+
     public function update(Request $request, int $id)
     {
         $solicitud = Solicitud::findOrFail($id);
@@ -102,6 +113,17 @@ class SolicitudController extends Controller
         $empresaId = Auth::user()->idempresa;
         if ($empresaId !== $solicitud->idEmpresaDestino) {
             abort(403, 'No tiene permiso para modificar esta solicitud.');
+        }
+
+        $bloqueada = Bloqueo::where(function ($q) use ($empresaId, $solicitud) {
+            $q->where('idempresa_bloqueadora', $solicitud->idEmpresaOrigen)
+                ->where('idempresa_bloqueada', $empresaId);
+        })->exists();
+
+        if ($bloqueada) {
+            return redirect()->back()->withErrors([
+                'error' => 'No puedes aceptar solicitudes de esta empresa. Te ha bloqueado.'
+            ]);
         }
 
         $validated = $request->validate([
@@ -113,7 +135,7 @@ class SolicitudController extends Controller
 
             if ($publicacion->cantidad < $solicitud->cantidad) {
                 return redirect()->back()->withErrors([
-                    'error' => 'El stock disponible ya no es suficiente para esta solicitud. Por favor contactar con el solicitante.'
+                    'error' => 'El stock disponible ya no es suficiente para esta solicitud.'
                 ]);
             }
 
@@ -126,8 +148,6 @@ class SolicitudController extends Controller
             }
         }
 
-
-
         $solicitud->update($validated);
 
         return redirect()->back()->with('message', "Solicitud {$validated['estado']} correctamente.");
@@ -137,7 +157,7 @@ class SolicitudController extends Controller
     {
         $idEmpresa = Auth::user()->idempresa;
 
-        $historial = Solicitud::with(['publicacion.empresa', 'empresaOrigen', 'empresaDestino'])
+        $historial = Solicitud::with(['publicacion.empresa', 'empresa_origen', 'empresa_destino'])
             ->where(function ($query) use ($idEmpresa) {
                 $query->where('idEmpresaOrigen', $idEmpresa)
                     ->orWhere('idEmpresaDestino', $idEmpresa);
