@@ -35,7 +35,6 @@ Route::middleware(['auth'])->group(function () {
 
 require __DIR__ . '/settings.php';
 
-// Rutas para TODOS los usuarios logueados (Jefes y Empleados)
 Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/categorias', [CategoriaController::class, 'index'])->name('categorias.index');
@@ -58,43 +57,71 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/mapa', [MapaController::class, 'index'])->name('mapa.index');
 
-    //Busqueda geoespacial
     Route::get('/buscar', [PublicacionController::class, 'search'])->name('publicaciones.search');
 
-    //Rutas para los chats
     Route::get('/chat/{solicitud}', [ChatController::class, 'index'])->name('chat.index');
     Route::post('/chat/{solicitud}', [ChatController::class, 'store'])->name('chat.store');
+    Route::post('/chat/{solicitud}/bloquear', [ChatController::class, 'bloquear'])->name('chat.bloquear');
+    Route::post('/chat/{solicitud}/desbloquear', [ChatController::class, 'desbloquear'])->name('chat.desbloquear');
     Route::get('/chats', [ChatController::class, 'listaChats'])->name('chat.lista');
-    // Reportes (funciona para admin y para empresa; el controlador decide qué mostrar)
+
     Route::get('/reportes', [ReporteController::class, 'index'])->name('reportes.index');
-    Route::get('/reportes/export/pdf', [ReporteController::class, 'exportPdf'])->name('reportes.export.pdf');
-    Route::get('/reportes/export/excel', [ReporteController::class, 'exportExcel'])->name('reportes.export.excel');
-    // Opcional: mantener una ruta admin explícita
     Route::get('/admin/reportes', [ReporteController::class, 'index'])->name('admin.reportes.index');
+
+    Route::post('/notificaciones/marcar-leida/{idnotificacion}', function ($idnotificacion) {
+        $user = Auth::user();
+
+        $notificacion = \App\Models\NotificacionBloqueo::where('idnotificacion', $idnotificacion)
+            ->where('idempresa_destinataria', $user->idempresa)
+            ->first();
+
+        if ($notificacion) {
+            $notificacion->update(['leida' => true]);
+        }
+
+        return back();
+    })->name('notificaciones.marcarLeida');
+
+    Route::post('/notificaciones/marcar-todas-leidas', function () {
+        $user = Auth::user();
+
+        \App\Models\NotificacionBloqueo::where('idempresa_destinataria', $user->idempresa)
+            ->where('leida', false)
+            ->update(['leida' => true]);
+
+        return back();
+    })->name('notificaciones.marcarTodasLeidas');
+
+    Route::post('/notificaciones/marcar-leida-empresa/{idempresa}', function ($idempresa) {
+        $user = Auth::user();
+
+        \App\Models\NotificacionBloqueo::where('idempresa_destinataria', $user->idempresa)
+            ->where('idempresa_bloqueadora', $idempresa)
+            ->where('leida', false)
+            ->update(['leida' => true]);
+
+        return back();  
+    })->name('notificaciones.marcarLeidaEmpresa');
 });
 
-// Rutas EXCLUSIVAS para el Jefe de Empresa
 Route::middleware(['auth', 'verified', 'role:Jefe'])->group(function () {
 
-    // Aprobar Publicaciones
     Route::post('/publicaciones/{id}/approve', [PublicacionController::class, 'approve'])->name('publicaciones.approve');
 
-    //perfil de empresas
     Route::get('/empresas/{id}/edit', [EmpresaController::class, 'edit'])->name('empresas.edit');
     Route::put('/empresas/{id}', [EmpresaController::class, 'update'])->name('empresas.update');
     Route::get('/empresas/{id}', [EmpresaController::class, 'show'])->name('empresas.show');
 
-    // Gestionar Empleados
     Route::get('/empleados', [EmpleadoController::class, 'index'])->name('empleados.index');
     Route::post('/empleados', [EmpleadoController::class, 'store'])->name('empleados.store');
 
-    // Administrar publicaciones 
     Route::get('/admin/publicaciones', [AdminPublicacionController::class, 'index'])->name('admin.publicaciones.index');
     Route::patch('/admin/publicaciones/{id}/estado', [AdminPublicacionController::class, 'updateEstado'])->name('admin.publicaciones.updateEstado');
     Route::patch('/admin/publicaciones/{id}/approve', [AdminPublicacionController::class, 'approve'])->name('admin.publicaciones.approve');
     Route::patch('/admin/publicaciones/{id}/reject', [AdminPublicacionController::class, 'reject'])->name('admin.publicaciones.reject');
     Route::delete('/admin/publicaciones/{id}', [AdminPublicacionController::class, 'destroy'])->name('admin.publicaciones.destroy');
 
-
     Route::get('/historial', [SolicitudController::class, 'historial'])->name('historial.index');
+
+    Route::delete('/empleados/{id}', [EmpleadoController::class, 'destroy'])->name('empleados.destroy');
 });

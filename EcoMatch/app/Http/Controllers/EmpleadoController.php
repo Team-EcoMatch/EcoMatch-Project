@@ -26,10 +26,10 @@ class EmpleadoController extends Controller
         ]);
     }
 
-        public function store(Request $request)
+    public function store(Request $request)
     {
         $idEmpresa = Auth::user()->idempresa;
-        $jefe = Auth::user(); 
+        $jefe = Auth::user();
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -46,15 +46,26 @@ class EmpleadoController extends Controller
             'idempresa' => $idEmpresa,
             'idRol' => $rolEmpleado->idroles,
             'email_verified_at' => now(),
-            'current_team_id' => $jefe->current_team_id, 
+            'current_team_id' => $jefe->current_team_id,
         ]);
 
         \App\Models\Membership::create([
             'team_id' => $jefe->current_team_id,
             'user_id' => $user->id,
-            'role' => 'member', 
+            'role' => 'member',
         ]);
 
         return redirect()->back()->with('message', 'Empleado agregado exitosamente.');
+    }
+
+    public function destroy (int $id)
+    {
+        $user = User::findOrFail($id);
+        if($user->idempresa !== Auth::user()->idempresa){
+            abort(403, 'No tienes permiso para eliminar este empleado.');
+        }
+
+        $user->delete();
+        return redirect()->back()->with('message', 'Empleado eliminado correctamente.');
     }
 }
