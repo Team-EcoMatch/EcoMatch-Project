@@ -10,7 +10,7 @@ import { onMounted } from 'vue';
 import {
     BarChart3, TrendingUp, Building2, FileText,
     ArrowLeftRight, Users, PackageCheck, Calendar,
-    Filter, Award, Layers
+    Filter, Award, Layers,FileSpreadsheet
 } from 'lucide-vue-next';
 import { Bar, Doughnut } from 'vue-chartjs';
 import {
@@ -185,20 +185,30 @@ const chartOptions = computed(() => ({
 
     <div class="py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-start mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-foreground dark:text-white flex items-center gap-2">
-                    <BarChart3 class="w-6 h-6 text-primary" />
-                    {{ esAdmin ? 'Reportes Globales' : esJefe ? 'Reportes de mi Empresa' : 'Mis Reportes' }}
-                </h1>
-                <p class="text-sm text-muted-foreground dark:text-zinc-300">
-                    {{ esAdmin
-                        ? 'Estadísticas de toda la plataforma EcoMatch.'
-                        : esJefe
-                            ? 'Estadísticas de actividad e impacto de tu empresa.'
-                            : 'Estadísticas de tu actividad personal en EcoMatch.' }}
-                </p>
-            </div>
-        </div>
+    <div>
+        <h1 class="text-2xl font-bold text-foreground flex items-center gap-2">
+            <BarChart3 class="w-6 h-6 text-primary" />
+            {{ esAdmin ? 'Reportes e Indicadores Globales' : 'Reportes de mi Empresa' }}
+        </h1>
+        <p class="text-sm text-muted-foreground">
+            {{ esAdmin ? 'Estadísticas globales' : 'Estadísticas de tu empresa' }}
+        </p>
+    </div>
+    <div class="flex gap-2">
+        <a :href="`/reportes/export/pdf?desde=${desde}&hasta=${hasta}`" target="_blank">
+            <Button variant="outline">
+                <FileText class="w-4 h-4 mr-2" />
+                Exportar PDF
+            </Button>
+        </a>
+        <a :href="`/reportes/export/excel?desde=${desde}&hasta=${hasta}`">
+            <Button variant="outline">
+                <FileSpreadsheet class="w-4 h-4 mr-2" />
+                Exportar Excel
+            </Button>
+        </a>
+    </div>
+</div>
 
         <!-- Filtros de fecha -->
         <Card class="mb-6">

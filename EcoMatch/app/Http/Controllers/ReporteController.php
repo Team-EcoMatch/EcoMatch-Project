@@ -2,53 +2,76 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\ReporteExport;
 use App\Models\Empresa;
 use App\Models\Publicacion;
 use App\Models\Solicitud;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReporteController extends Controller
 {
     public function index(Request $request)
     {
+        $datos = $this->obtenerDatos($request);
+
+        return Inertia::render('Reportes/Index', $datos);
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $datos = $this->obtenerDatos($request);
+
+        $pdf = Pdf::loadView('reportes.pdf', $datos)
+            ->setPaper('a4', 'portrait');
+
+        $nombreArchivo = 'reporte-ecomatch-' . now()->format('Y-m-d') . '.pdf';
+        return $pdf->download($nombreArchivo);
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $datos = $this->obtenerDatos($request);
+
+        $nombreArchivo = 'reporte-ecomatch-' . now()->format('Y-m-d') . '.xlsx';
+        return Excel::download(new ReporteExport($datos), $nombreArchivo);
+    }
+
+    private function obtenerDatos(Request $request): array
+    {
         $user = Auth::user();
-        $rol = $user->rol?->tipo; // 'admin', 'Jefe', 'Empresa'
+        $rol = $user->rol?->tipo;
         $empresaId = $user->idempresa;
         $userId = $user->id;
 
-        // Determinar alcance
         $esAdminGlobal = $rol === 'admin';
         $esJefe = $rol === 'Jefe';
         $esEmpleado = $rol === 'Empresa';
 
-        // Filtros de fecha
         $desde = $request->input('desde', now()->subDays(30)->format('Y-m-d'));
         $hasta = $request->input('hasta', now()->format('Y-m-d'));
         $desdeDate = $desde . ' 00:00:00';
         $hastaDate = $hasta . ' 23:59:59';
 
-        $filtrarPublicaciones = function ($query) use ($esAdminGlobal, $esJefe, $esEmpleado, $empresaId, $userId) {
+        // ===== HELPERS DE FILTRADO POR ROL =====
+        $filtrarPublicaciones = function ($query) use ($esJefe, $esEmpleado, $empresaId, $userId) {
             if ($esEmpleado) {
-                // Solo sus propias publicaciones
                 $query->where('publicaciones.user_id', $userId);
             } elseif ($esJefe) {
-                // Todas las de su empresa
                 $query->where('publicaciones.idempresa', $empresaId);
             }
-            // Admin global: sin filtro
             return $query;
         };
 
-        $filtrarSolicitudes = function ($query) use ($esAdminGlobal, $esJefe, $esEmpleado, $empresaId, $userId) {
+        $filtrarSolicitudes = function ($query) use ($esJefe, $esEmpleado, $empresaId, $userId) {
             if ($esEmpleado) {
-                // Solo las que él creó
                 $query->where('solicitudes.user_id', $userId);
             } elseif ($esJefe) {
-                // Todas donde la empresa participa
                 $query->where(function ($q) use ($empresaId) {
                     $q->where('solicitudes.idEmpresaOrigen', $empresaId)
                         ->orWhere('solicitudes.idEmpresaDestino', $empresaId);
@@ -62,7 +85,7 @@ class ReporteController extends Controller
         $totalUsuarios = match (true) {
             $esAdminGlobal => User::count(),
             $esJefe => User::where('idempresa', $empresaId)->count(),
-            $esEmpleado => 1, // solo él mismo
+            $esEmpleado => 1,
         };
 
         $totalPublicaciones = $filtrarPublicaciones(Publicacion::query())->count();
@@ -83,16 +106,16 @@ class ReporteController extends Controller
 
         // ===== TENDENCIA MENSUAL =====
         $publicacionesPorMes = $filtrarPublicaciones(Publicacion::query())
-            ->select(DB::raw('DATE_FORMAT(created_at, "%Y-%m") as mes'), DB::raw('count(*) as total'))
-            ->where('created_at', '>=', now()->subMonths(12))
+            ->select(DB::raw('DATE_FORMAT(publicaciones.created_at, "%Y-%m") as mes'), DB::raw('count(*) as total'))
+            ->where('publicaciones.created_at', '>=', now()->subMonths(12))
             ->groupBy('mes')
             ->orderBy('mes', 'asc')
             ->pluck('total', 'mes')
             ->toArray();
 
         $solicitudesPorMes = $filtrarSolicitudes(Solicitud::query())
-            ->select(DB::raw('DATE_FORMAT(created_at, "%Y-%m") as mes'), DB::raw('count(*) as total'))
-            ->where('created_at', '>=', now()->subMonths(12))
+            ->select(DB::raw('DATE_FORMAT(solicitudes.created_at, "%Y-%m") as mes'), DB::raw('count(*) as total'))
+            ->where('solicitudes.created_at', '>=', now()->subMonths(12))
             ->groupBy('mes')
             ->orderBy('mes', 'asc')
             ->pluck('total', 'mes')
@@ -118,20 +141,28 @@ class ReporteController extends Controller
 
         // ===== TOP EMPRESAS (solo admin global) =====
         $topEmpresas = $esAdminGlobal
-            ? Empresa::withCount('publicaciones')->orderBy('publicaciones_count', 'desc')->limit(5)
+            ? Empresa::withCount('publicaciones')
+            ->orderBy('publicaciones_count', 'desc')
+            ->limit(5)
             ->get(['idempresa', 'nombreEmpresa', 'publicaciones_count'])
             : [];
 
         // ===== TOP MATERIALES =====
         $topMateriales = $filtrarPublicaciones(Publicacion::query())
-            ->select('nombre', DB::raw('count(*) as total'))
-            ->groupBy('nombre')->orderBy('total', 'desc')->limit(5)->get();
+            ->select('publicaciones.nombre', DB::raw('count(*) as total'))
+            ->groupBy('publicaciones.nombre')
+            ->orderBy('total', 'desc')
+            ->limit(5)
+            ->get();
 
         // ===== POR CATEGORÍA =====
         $porCategoria = $filtrarPublicaciones(Publicacion::query())
             ->join('categorias', 'publicaciones.idcategorias', '=', 'categorias.idcategorias')
             ->select('categorias.nombre', DB::raw('count(*) as total'))
-            ->groupBy('categorias.nombre')->orderBy('total', 'desc')->limit(10)->get();
+            ->groupBy('categorias.nombre')
+            ->orderBy('total', 'desc')
+            ->limit(10)
+            ->get();
 
         // ===== DESEMPEÑO POR EMPLEADO (solo Jefe) =====
         $desempenoEmpleados = [];
@@ -150,7 +181,8 @@ class ReporteController extends Controller
                         'publicaciones' => $u->total_publicaciones,
                         'solicitudes' => $u->total_solicitudes,
                     ];
-                });
+                })
+                ->toArray();
         }
 
         // ===== PERIODO FILTRADO =====
@@ -163,7 +195,7 @@ class ReporteController extends Controller
                 : User::where('idempresa', $empresaId)->whereBetween('created_at', [$desdeDate, $hastaDate])->count(),
         ];
 
-        return Inertia::render('Reportes/Index', [
+        return [
             'rol' => $rol,
             'esAdmin' => $esAdminGlobal,
             'esJefe' => $esJefe,
@@ -186,6 +218,11 @@ class ReporteController extends Controller
             'desempenoEmpleados' => $desempenoEmpleados,
             'periodo' => $periodo,
             'filtros' => ['desde' => $desde, 'hasta' => $hasta],
-        ]);
+            'titulo' => $esAdminGlobal
+                ? 'Reporte Global de la Plataforma'
+                : ($esJefe ? 'Reporte de mi Empresa' : 'Reporte Personal'),
+            'desde' => $desde,
+            'hasta' => $hasta,
+        ];
     }
 }

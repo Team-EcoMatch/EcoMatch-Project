@@ -65,11 +65,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/chat/{solicitud}', [ChatController::class, 'index'])->name('chat.index');
     Route::post('/chat/{solicitud}', [ChatController::class, 'store'])->name('chat.store');
     Route::get('/chats', [ChatController::class, 'listaChats'])->name('chat.lista');
-      // Reportes (funciona para admin y para empresa; el controlador decide qué mostrar)
-    Route::get('/reportes', [ReporteController::class, 'index']) ->name('reportes.index');
-
+    // Reportes (funciona para admin y para empresa; el controlador decide qué mostrar)
+    Route::get('/reportes', [ReporteController::class, 'index'])->name('reportes.index');
+    Route::get('/reportes/export/pdf', [ReporteController::class, 'exportPdf'])->name('reportes.export.pdf');
+    Route::get('/reportes/export/excel', [ReporteController::class, 'exportExcel'])->name('reportes.export.excel');
     // Opcional: mantener una ruta admin explícita
-    Route::get('/admin/reportes', [ReporteController::class, 'index']) ->name('admin.reportes.index');
+    Route::get('/admin/reportes', [ReporteController::class, 'index'])->name('admin.reportes.index');
 });
 
 // Rutas EXCLUSIVAS para el Jefe de Empresa
