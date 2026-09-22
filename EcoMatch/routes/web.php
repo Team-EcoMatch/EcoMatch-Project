@@ -66,6 +66,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/chats', [ChatController::class, 'listaChats'])->name('chat.lista');
 
     Route::get('/reportes', [ReporteController::class, 'index'])->name('reportes.index');
+    Route::get('/reportes/export/pdf', [ReporteController::class, 'exportPdf'])->name('reportes.export.pdf');
+    Route::get('/reportes/export/excel', [ReporteController::class, 'exportExcel'])->name('reportes.export.excel');
+
     Route::get('/admin/reportes', [ReporteController::class, 'index'])->name('admin.reportes.index');
 
     Route::post('/notificaciones/marcar-leida/{idnotificacion}', function ($idnotificacion) {
@@ -100,7 +103,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->where('leida', false)
             ->update(['leida' => true]);
 
-        return back();  
+        return back();
     })->name('notificaciones.marcarLeidaEmpresa');
 });
 
