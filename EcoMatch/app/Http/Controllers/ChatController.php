@@ -10,6 +10,7 @@ use App\Models\Empresa;
 use App\Events\MensajeEnviado;
 use App\Events\EmpresaBloqueada;
 use App\Events\EmpresaDesbloqueada;
+use App\Events\MensajeLeido;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -27,6 +28,21 @@ class ChatController extends Controller
         $otraEmpresaId = $solicitud->idEmpresaOrigen === $empresaId
             ? $solicitud->idEmpresaDestino
             : $solicitud->idEmpresaOrigen;
+
+        $idsLeidos = Mensaje::where('idsolicitud', $solicitudId)
+            ->where('idEmisora', $otraEmpresaId)
+            ->where('leido', false)
+            ->pluck('idmensajes')
+            ->toArray();
+
+        if (!empty($idsLeidos)) {
+            Mensaje::where('idsolicitud', $solicitudId)
+                ->where('idEmisora', $otraEmpresaId)
+                ->where('leido', false)
+                ->update(['leido' => true]);
+
+            broadcast(new MensajeLeido($solicitudId, $idsLeidos, $empresaId));
+        }
 
         $mensajes = Mensaje::where('idsolicitud', $solicitudId)
             ->with('empresa_emisora')
@@ -107,9 +123,23 @@ class ChatController extends Controller
 
             $extension = strtolower(pathinfo($request->archivo_nombre, PATHINFO_EXTENSION));
             $extensionesPermitidas = [
-                'jpg', 'jpeg', 'png', 'gif', 'webp',
-                'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
-                'txt', 'csv', 'zip', 'rar', '7z',
+                'jpg',
+                'jpeg',
+                'png',
+                'gif',
+                'webp',
+                'pdf',
+                'doc',
+                'docx',
+                'xls',
+                'xlsx',
+                'ppt',
+                'pptx',
+                'txt',
+                'csv',
+                'zip',
+                'rar',
+                '7z',
             ];
 
             if (!in_array($extension, $extensionesPermitidas)) {
@@ -130,7 +160,7 @@ class ChatController extends Controller
         $mensaje->load('empresa_emisora');
         broadcast(new MensajeEnviado($mensaje, $solicitud))->toOthers();
 
-        return back()->with('message', 'Mensaje enviado.');
+        return response()->json(['mensaje' => $mensaje]);
     }
 
     public function bloquear(Request $request, int $solicitudId)
@@ -243,5 +273,31 @@ class ChatController extends Controller
             'chats' => $chats,
             'empresaId' => $empresaId,
         ]);
+    }
+    public function marcarLeido(int $solicitudId)
+    {
+        $empresaId = Auth::user()->idempresa;
+
+        $solicitud = Solicitud::findOrFail($solicitudId);
+        $otraEmpresaId = $solicitud->idEmpresaOrigen === $empresaId
+            ? $solicitud->idEmpresaDestino
+            : $solicitud->idEmpresaOrigen;
+
+        $idsLeidos = Mensaje::where('idsolicitud', $solicitudId)
+            ->where('idEmisora', $otraEmpresaId)
+            ->where('leido', false)
+            ->pluck('idmensajes')
+            ->toArray();
+
+        if (!empty($idsLeidos)) {
+            Mensaje::where('idsolicitud', $solicitudId)
+                ->where('idEmisora', $otraEmpresaId)
+                ->where('leido', false)
+                ->update(['leido' => true]);
+
+            broadcast(new MensajeLeido($solicitudId, $idsLeidos, $empresaId));
+        }
+
+        return back();
     }
 }

@@ -64,6 +64,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/chat/{solicitud}/bloquear', [ChatController::class, 'bloquear'])->name('chat.bloquear');
     Route::post('/chat/{solicitud}/desbloquear', [ChatController::class, 'desbloquear'])->name('chat.desbloquear');
     Route::get('/chats', [ChatController::class, 'listaChats'])->name('chat.lista');
+    Route::post('/chat/{solicitud}/marcar-leido', [ChatController::class, 'marcarLeido'])->name('chat.marcarLeido');
 
     Route::get('/reportes', [ReporteController::class, 'index'])->name('reportes.index');
     Route::get('/reportes/export/pdf', [ReporteController::class, 'exportPdf'])->name('reportes.export.pdf');
@@ -105,6 +106,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         return back();
     })->name('notificaciones.marcarLeidaEmpresa');
+
+    
 });
 
 Route::middleware(['auth', 'verified', 'role:Jefe'])->group(function () {

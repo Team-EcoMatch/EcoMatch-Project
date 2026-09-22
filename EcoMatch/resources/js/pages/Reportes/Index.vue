@@ -10,7 +10,7 @@ import { onMounted } from 'vue';
 import {
     BarChart3, TrendingUp, Building2, FileText,
     ArrowLeftRight, Users, PackageCheck, Calendar,
-    Filter, Award, Layers,FileSpreadsheet
+    Filter, Award, Layers, FileSpreadsheet
 } from 'lucide-vue-next';
 import { Bar, Doughnut } from 'vue-chartjs';
 import {
@@ -32,8 +32,8 @@ const props = defineProps<{
     esJefe: boolean;
     esEmpleado: boolean;
     indicadores: any;
-    publicacionesPorEstado: Record<string, number>;   // ← tipo explícito
-    solicitudesPorEstado: Record<string, number>;      // ← tipo explícito
+    publicacionesPorEstado: Record<string, number>;
+    solicitudesPorEstado: Record<string, number>;
     publicacionesPorMes: Record<string, number>;
     solicitudesPorMes: Record<string, number>;
     materialesIntercambiados: any[];
@@ -121,10 +121,8 @@ const chartCategorias = computed(() => ({
         data: props.porCategoria.map((c: any) => c.total),
         backgroundColor: '#a78bfa',
         maxBarThickness: 24,
-
     }],
 }));
-
 
 const isDark = ref(false);
 const textColor = ref('#111827');
@@ -184,58 +182,56 @@ const chartOptions = computed(() => ({
     <Head :title="esAdmin ? 'Reportes Globales' : 'Reportes de mi Empresa'" />
 
     <div class="py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-start mb-6">
-    <div>
-        <h1 class="text-2xl font-bold text-foreground flex items-center gap-2">
-            <BarChart3 class="w-6 h-6 text-primary" />
-            {{ esAdmin ? 'Reportes e Indicadores Globales' : 'Reportes de mi Empresa' }}
-        </h1>
-        <p class="text-sm text-muted-foreground">
-            {{ esAdmin ? 'Estadísticas globales' : 'Estadísticas de tu empresa' }}
-        </p>
-    </div>
-    <div class="flex gap-2">
-        <a :href="`/reportes/export/pdf?desde=${desde}&hasta=${hasta}`" target="_blank">
-            <Button variant="outline">
-                <FileText class="w-4 h-4 mr-2" />
-                Exportar PDF
-            </Button>
-        </a>
-        <a :href="`/reportes/export/excel?desde=${desde}&hasta=${hasta}`">
-            <Button variant="outline">
-                <FileSpreadsheet class="w-4 h-4 mr-2" />
-                Exportar Excel
-            </Button>
-        </a>
-    </div>
-</div>
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
+            <div>
+                <h1 class="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+                    <BarChart3 class="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+                    {{ esAdmin ? 'Reportes e Indicadores Globales' : 'Reportes de mi Empresa' }}
+                </h1>
+                <p class="text-sm text-muted-foreground">
+                    {{ esAdmin ? 'Estadísticas globales' : 'Estadísticas de tu empresa' }}
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a :href="`/reportes/export/pdf?desde=${desde}&hasta=${hasta}`" target="_blank">
+                    <Button variant="outline" class="h-10">
+                        <FileText class="w-4 h-4 mr-2" />
+                        <span class="text-xs sm:text-sm">PDF</span>
+                    </Button>
+                </a>
+                <a :href="`/reportes/export/excel?desde=${desde}&hasta=${hasta}`">
+                    <Button variant="outline" class="h-10">
+                        <FileSpreadsheet class="w-4 h-4 mr-2" />
+                        <span class="text-xs sm:text-sm">Excel</span>
+                    </Button>
+                </a>
+            </div>
+        </div>
 
-        <!-- Filtros de fecha -->
         <Card class="mb-6">
             <CardContent class="p-4">
                 <div class="flex flex-col md:flex-row gap-4 items-end">
-                    <div class="flex-1">
+                    <div class="flex-1 w-full">
                         <Label class="text-xs text-muted-foreground dark:text-zinc-200">Desde</Label>
-                        <Input v-model="desde" type="date" />
+                        <Input v-model="desde" type="date" class="mt-1" />
                     </div>
-                    <div class="flex-1">
+                    <div class="flex-1 w-full">
                         <Label class="text-xs text-muted-foreground dark:text-zinc-200">Hasta</Label>
-                        <Input v-model="hasta" type="date" />
+                        <Input v-model="hasta" type="date" class="mt-1" />
                     </div>
-                    <div class="flex gap-2">
-                        <Button @click="aplicarFiltros" class="bg-primary text-primary-foreground">
+                    <div class="flex gap-2 w-full md:w-auto">
+                        <Button @click="aplicarFiltros" class="bg-primary text-primary-foreground flex-1 md:flex-none">
                             <Filter class="w-4 h-4 mr-2" />
                             Filtrar
                         </Button>
-                        <Button variant="outline" @click="limpiarFiltros">Limpiar</Button>
+                        <Button variant="outline" @click="limpiarFiltros" class="flex-1 md:flex-none">
+                            Limpiar
+                        </Button>
                     </div>
                 </div>
             </CardContent>
         </Card>
 
-        
-
-        <!--Desempeño por empleado-->
         <Card v-if="esJefe" class="mb-6">
             <CardHeader>
                 <CardTitle class="text-base flex items-center gap-2">
@@ -247,85 +243,135 @@ const chartOptions = computed(() => ({
                 <div v-if="desempenoEmpleados.length === 0" class="text-sm text-muted-foreground text-center py-4">
                     No hay empleados registrados.
                 </div>
-                <div v-else class="overflow-x-auto">
+
+                <div v-else class="hidden md:block overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
                             <tr class="border-b border-border">
-                                <th class="text-left py-2 px-3 font-medium text-muted-foreground">Empleado</th>
-                                <th class="text-right py-2 px-3 font-medium text-muted-foreground">Publicaciones</th>
-                                <th class="text-right py-2 px-3 font-medium text-muted-foreground">Solicitudes</th>
+                                <th class="text-left py-3 px-4 font-medium text-muted-foreground">Empleado</th>
+                                <th class="text-right py-3 px-4 font-medium text-muted-foreground">Publicaciones</th>
+                                <th class="text-right py-3 px-4 font-medium text-muted-foreground">Solicitudes</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="emp in desempenoEmpleados" :key="emp.id" class="border-b border-border/50">
-                                <td class="py-2 px-3">
-                                    <div class="font-medium text-foreground dark:text-white">{{ emp.nombre }}</div>
-                                    <div class="text-xs text-muted-foreground">{{ emp.email }}</div>
+                            <tr v-for="emp in desempenoEmpleados" :key="emp.id"
+                                class="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                                <td class="py-3 px-4">
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-xs">
+                                            {{ emp.nombre.charAt(0).toUpperCase() }}
+                                        </div>
+                                        <div>
+                                            <div class="font-medium text-foreground dark:text-white">{{ emp.nombre }}
+                                            </div>
+                                            <div class="text-xs text-muted-foreground">{{ emp.email }}</div>
+                                        </div>
+                                    </div>
                                 </td>
-                                <td class="py-2 px-3 text-right font-semibold">{{ emp.publicaciones }}</td>
-                                <td class="py-2 px-3 text-right font-semibold">{{ emp.solicitudes }}</td>
+                                <td class="py-3 px-4 text-right">
+                                    <span
+                                        class="inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold text-sm">
+                                        {{ emp.publicaciones }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-right">
+                                    <span
+                                        class="inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                                        {{ emp.solicitudes }}
+                                    </span>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+
+                <div v-if="desempenoEmpleados.length > 0" class="md:hidden space-y-3">
+                    <div v-for="emp in desempenoEmpleados" :key="emp.id"
+                        class="border border-border rounded-xl p-4 bg-muted/10">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div
+                                class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
+                                {{ emp.nombre.charAt(0).toUpperCase() }}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium text-foreground dark:text-white truncate">{{ emp.nombre }}</div>
+                                <div class="text-xs text-muted-foreground truncate">{{ emp.email }}</div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-emerald-500/10 rounded-lg p-3 text-center">
+                                <p class="text-xs text-muted-foreground mb-1">Publicaciones</p>
+                                <p class="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                                    {{ emp.publicaciones }}</p>
+                            </div>
+                            <div class="bg-blue-500/10 rounded-lg p-3 text-center">
+                                <p class="text-xs text-muted-foreground mb-1">Solicitudes</p>
+                                <p class="text-xl font-bold text-blue-600 dark:text-blue-400">{{ emp.solicitudes }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </CardContent>
         </Card>
-        <!-- Indicadores generales -->
+
         <div
-            :class="esAdmin ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6' : 'grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6'">
+            :class="esAdmin ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6' : 'grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6'">
             <Card v-if="esAdmin">
-                <CardContent class="p-4">
+                <CardContent class="p-3 sm:p-4">
                     <div class="flex items-center gap-2 mb-1">
                         <Building2 class="w-4 h-4 text-blue-500" />
                         <p class="text-xs text-muted-foreground dark:text-zinc-300">Empresas</p>
                     </div>
-                    <p class="text-2xl font-bold text-foreground dark:text-white">{{ indicadores.totalEmpresas }}</p>
+                    <p class="text-xl sm:text-2xl font-bold text-foreground dark:text-white">
+                        {{ indicadores.totalEmpresas }}</p>
                 </CardContent>
             </Card>
             <Card>
-                <CardContent class="p-4">
+                <CardContent class="p-3 sm:p-4">
                     <div class="flex items-center gap-2 mb-1">
                         <Users class="w-4 h-4 text-purple-500" />
                         <p class="text-xs text-muted-foreground dark:text-zinc-300">
-                            {{ esAdmin ? 'Usuarios' : 'Usuarios de mi empresa' }}
+                            {{ esAdmin ? 'Usuarios' : 'Usuarios' }}
                         </p>
                     </div>
-                    <p class="text-2xl font-bold text-foreground dark:text-white">{{ indicadores.totalUsuarios }}</p>
+                    <p class="text-xl sm:text-2xl font-bold text-foreground dark:text-white">
+                        {{ indicadores.totalUsuarios }}</p>
                 </CardContent>
             </Card>
             <Card>
-                <CardContent class="p-4">
+                <CardContent class="p-3 sm:p-4">
                     <div class="flex items-center gap-2 mb-1">
                         <FileText class="w-4 h-4 text-emerald-500" />
                         <p class="text-xs text-muted-foreground dark:text-zinc-300">Publicaciones</p>
                     </div>
-                    <p class="text-2xl font-bold text-foreground dark:text-white">{{ indicadores.totalPublicaciones }}
-                    </p>
+                    <p class="text-xl sm:text-2xl font-bold text-foreground dark:text-white">
+                        {{ indicadores.totalPublicaciones }}</p>
                 </CardContent>
             </Card>
             <Card>
-                <CardContent class="p-4">
+                <CardContent class="p-3 sm:p-4">
                     <div class="flex items-center gap-2 mb-1">
                         <ArrowLeftRight class="w-4 h-4 text-amber-500" />
                         <p class="text-xs text-muted-foreground dark:text-zinc-300">Solicitudes</p>
                     </div>
-                    <p class="text-2xl font-bold text-foreground dark:text-white">{{ indicadores.totalSolicitudes }}</p>
+                    <p class="text-xl sm:text-2xl font-bold text-foreground dark:text-white">
+                        {{ indicadores.totalSolicitudes }}</p>
                 </CardContent>
             </Card>
             <Card class="bg-emerald-50 dark:bg-emerald-950/30">
-                <CardContent class="p-4">
+                <CardContent class="p-3 sm:p-4">
                     <div class="flex items-center gap-2 mb-1">
                         <PackageCheck class="w-4 h-4 text-emerald-600" />
                         <p class="text-xs text-muted-foreground dark:text-zinc-300">Tasa Aceptación</p>
                     </div>
-                    <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                    <p class="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                         {{ indicadores.tasaAceptacion }}%
                     </p>
                 </CardContent>
             </Card>
         </div>
 
-        <!-- Periodo filtrado -->
         <Card class="mb-6">
             <CardHeader>
                 <CardTitle class="text-base flex items-center gap-2">
@@ -334,29 +380,31 @@ const chartOptions = computed(() => ({
                 </CardTitle>
             </CardHeader>
             <CardContent>
-
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                     <div class="bg-muted/30 p-3 rounded-lg">
                         <p class="text-xs text-muted-foreground dark:text-zinc-300">Publicaciones nuevas</p>
-                        <p class="text-xl font-bold text-foreground dark:text-white">{{ periodo.publicaciones }}</p>
+                        <p class="text-lg sm:text-xl font-bold text-foreground dark:text-white">
+                            {{ periodo.publicaciones }}</p>
                     </div>
                     <div class="bg-muted/30 p-3 rounded-lg">
                         <p class="text-xs text-muted-foreground dark:text-zinc-300">Solicitudes nuevas</p>
-                        <p class="text-xl font-bold text-foreground dark:text-white">{{ periodo.solicitudes }}</p>
+                        <p class="text-lg sm:text-xl font-bold text-foreground dark:text-white">
+                            {{ periodo.solicitudes }}</p>
                     </div>
                     <div v-if="esAdmin" class="bg-muted/30 p-3 rounded-lg">
                         <p class="text-xs text-muted-foreground dark:text-zinc-300">Empresas nuevas</p>
-                        <p class="text-xl font-bold text-foreground dark:text-white">{{ periodo.empresas_nuevas }}</p>
+                        <p class="text-lg sm:text-xl font-bold text-foreground dark:text-white">
+                            {{ periodo.empresas_nuevas }}</p>
                     </div>
                     <div class="bg-muted/30 p-3 rounded-lg">
                         <p class="text-xs text-muted-foreground dark:text-zinc-300">Usuarios nuevos</p>
-                        <p class="text-xl font-bold text-foreground dark:text-white">{{ periodo.usuarios_nuevos }}</p>
+                        <p class="text-lg sm:text-xl font-bold text-foreground dark:text-white">
+                            {{ periodo.usuarios_nuevos }}</p>
                     </div>
                 </div>
             </CardContent>
         </Card>
 
-        <!-- Impacto ambiental -->
         <Card class="mb-6">
             <CardHeader>
                 <CardTitle class="text-base flex items-center gap-2">
@@ -369,11 +417,11 @@ const chartOptions = computed(() => ({
                     class="text-sm text-muted-foreground dark:text-zinc-400 text-center py-4">
                     Aún no hay intercambios completados.
                 </div>
-                <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                     <div v-for="mat in materialesIntercambiados" :key="mat.unidadMedida"
                         class="border border-border rounded-lg p-4">
-                        <p class="text-xs font-semibold text-muted-foreground dark:text-zinc-200">{{ mat.unidadMedida }}
-                        </p>
+                        <p class="text-xs font-semibold text-muted-foreground dark:text-zinc-200">
+                            {{ mat.unidadMedida }}</p>
                         <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                             {{ Number(mat.total_cantidad).toLocaleString() }}
                         </p>
@@ -385,14 +433,13 @@ const chartOptions = computed(() => ({
             </CardContent>
         </Card>
 
-        <!-- Gráficos -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
             <Card>
                 <CardHeader>
                     <CardTitle class="text-base">Publicaciones por Estado</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div class="h-64">
+                    <div class="h-56 sm:h-64">
                         <Doughnut :data="chartPublicacionesEstado" :options="chartOptions" />
                     </div>
                 </CardContent>
@@ -402,7 +449,7 @@ const chartOptions = computed(() => ({
                     <CardTitle class="text-base">Solicitudes por Estado</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div class="h-64">
+                    <div class="h-56 sm:h-64">
                         <Doughnut :data="chartSolicitudesEstado" :options="chartOptions" />
                     </div>
                 </CardContent>
@@ -414,7 +461,7 @@ const chartOptions = computed(() => ({
                 <CardTitle class="text-base">Tendencia Mensual (últimos 12 meses)</CardTitle>
             </CardHeader>
             <CardContent>
-                <div class="h-72">
+                <div class="h-64 sm:h-72">
                     <Bar :data="chartTendencia" :options="chartOptions" />
                 </div>
             </CardContent>
@@ -428,14 +475,13 @@ const chartOptions = computed(() => ({
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div class="h-72">
+                <div class="h-64 sm:h-72">
                     <Bar :data="chartCategorias" :options="chartOptions" />
                 </div>
             </CardContent>
         </Card>
 
-        <!-- Rankings -->
-        <div :class="esAdmin ? 'grid grid-cols-1 lg:grid-cols-2 gap-6' : 'grid grid-cols-1 gap-6'">
+        <div :class="esAdmin ? 'grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6' : 'grid grid-cols-1 gap-4 sm:gap-6'">
             <Card v-if="esAdmin">
                 <CardHeader>
                     <CardTitle class="text-base flex items-center gap-2">
@@ -451,12 +497,12 @@ const chartOptions = computed(() => ({
                     <div v-else class="space-y-3">
                         <div v-for="(emp, index) in topEmpresas" :key="emp.idempresa" class="flex items-center gap-3">
                             <div
-                                class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-sm">
+                                class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-sm shrink-0">
                                 {{ index + 1 }}
                             </div>
                             <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium truncate text-foreground dark:text-white">{{
-                                    emp.nombreEmpresa }}</p>
+                                <p class="text-sm font-medium truncate text-foreground dark:text-white">
+                                    {{ emp.nombreEmpresa }}</p>
                             </div>
                             <Badge variant="outline" class="shrink-0">
                                 {{ emp.publicaciones_count }} pub.
@@ -481,12 +527,12 @@ const chartOptions = computed(() => ({
                     <div v-else class="space-y-3">
                         <div v-for="(mat, index) in topMateriales" :key="mat.nombre" class="flex items-center gap-3">
                             <div
-                                class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 font-bold text-sm">
+                                class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 font-bold text-sm shrink-0">
                                 {{ index + 1 }}
                             </div>
                             <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium truncate text-foreground dark:text-white">{{ mat.nombre }}
-                                </p>
+                                <p class="text-sm font-medium truncate text-foreground dark:text-white">
+                                    {{ mat.nombre }}</p>
                             </div>
                             <Badge variant="outline" class="shrink-0">
                                 {{ mat.total }} pub.
