@@ -28,7 +28,7 @@ const mainNavItems = computed<NavItem[]>(() => {
     const items = [
         { title: 'Dashboard', href: dashboardUrl.value, icon: LayoutGrid },
         { title: 'Categorías', href: '/categorias', icon: Tags },
-        { title: 'Publicaciones', href: '/publicaciones', icon: Boxes },
+        { title: 'Mis Publicaciones', href: '/publicaciones', icon: Boxes },
         { title: 'Encontrar Materiales', href: '/buscar', icon: ScanSearch },
         { title: 'Solicitudes', href: '/solicitudes', icon: Inbox },
         { title: 'Chats', href: '/chats', icon: MessageSquare },

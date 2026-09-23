@@ -4,8 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+
 
 import {
     AlertDialog,
@@ -19,16 +18,8 @@ import {
     AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
 
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle
-} from '@/components/ui/dialog';
 
-import { Pencil, Trash2, CheckCircle2, XCircle, X, Plus, ArrowLeftRight, Search } from 'lucide-vue-next';
+import { Pencil, Trash2, CheckCircle2, XCircle, X, Plus, Search } from 'lucide-vue-next';
 import { ref, onMounted, computed } from 'vue';
 
 interface Publicacion {
@@ -58,14 +49,11 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
-const currentEmpresaId = page.props.auth?.user?.idempresa;
 const userRol = page.props.auth?.user?.rol;
 
 const showNotification = ref(false);
 const notificationMessage = ref(props.message || '');
 
-const showConfirmDialog = ref(false);
-const solicitudPendiente = ref<{ id: number; mensaje: string } | null>(null);
 
 const searchQuery = ref('');
 const selectedCategory = ref('all');
@@ -148,72 +136,6 @@ function confirmarModeracion() {
     });
 }
 
-const solicitudForm = useForm({
-    idpublicaciones: null as number | null,
-    mensaje: '',
-    cantidad: '',
-});
-
-const openSolicitudDialog = ref(false);
-
-function abrirModalSolicitud(id: number) {
-    solicitudForm.idpublicaciones = id;
-    solicitudForm.mensaje = '';
-    solicitudForm.cantidad = '';
-    openSolicitudDialog.value = true;
-}
-
-function enviarSolicitud() {
-    if (!solicitudForm.cantidad || parseFloat(solicitudForm.cantidad) <= 0) {
-        triggerNotification('Debes especificar una cantidad válida.');
-        return;
-    }
-    if (!solicitudForm.mensaje?.trim()) {
-        triggerNotification('Escriba un mensaje');
-        return;
-    }
-
-    solicitudForm.post('/solicitudes', {
-        preserveScroll: true,
-        onSuccess: (page) => {
-            openSolicitudDialog.value = false;
-            solicitudForm.reset();
-            const msg = (page.props.message as string) || 'Solicitud enviada correctamente.';
-            triggerNotification(msg);
-        },
-        onError: (errors) => {
-            const errorMsg = Object.values(errors).flat().join('\n');
-            triggerNotification('Error: ' + errorMsg);
-        }
-    });
-}
-
-function confirmarEnvio() {
-    if (!solicitudPendiente.value) return;
-
-    if (!solicitudForm.cantidad || parseFloat(solicitudForm.cantidad) <= 0) {
-        triggerNotification('Debes especificar una cantidad válida.');
-        return;
-    }
-
-    solicitudForm.post('/solicitudes', {
-        preserveScroll: true,
-        onSuccess: (page) => {
-            showConfirmDialog.value = false;
-            solicitudPendiente.value = null;
-            const msg = (page.props.message as string) || 'Solicitud enviada correctamente.';
-            triggerNotification(msg);
-        },
-        onError: (errors) => {
-            const errorMsg = Object.values(errors).flat().join('\n');
-            triggerNotification('Error: ' + errorMsg);
-        }
-    });
-}
-
-function esDueno(pub: Publicacion): boolean {
-    return pub.idempresa === currentEmpresaId;
-}
 </script>
 
 <template>
@@ -249,21 +171,24 @@ function esDueno(pub: Publicacion): boolean {
         </Transition>
 
         <div class="max-w-7xl mx-auto">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-semibold">Materiales Publicados</h2>
-                <div class="flex gap-2">
-                    <Button @click="router.visit('/buscar')" variant="outline"
-                        class="border-primary text-primary hover:bg-accent">
-                        <Search class="w-4 h-4 mr-2" />
-                        Buscar por ubicación
-                    </Button>
-                    <Button @click="router.visit('/publicaciones/create')"
-                        class="bg-primary hover:bg-primary/90 text-primary-foreground">
-                        <Plus class="w-4 h-4 mr-2" />
-                        Crear Publicación
-                    </Button>
-                </div>
-            </div>
+           <div class="flex justify-between items-center mb-6">
+    <div>
+        <h2 class="text-2xl font-semibold">Mis Publicaciones</h2>
+        <p class="text-sm text-muted-foreground">Gestiona los materiales publicados por tu empresa.</p>
+    </div>
+    <div class="flex gap-2">
+        <Button @click="router.visit('/buscar')" variant="outline"
+            class="border-primary text-primary hover:bg-accent">
+            <Search class="w-4 h-4 mr-2" />
+            Buscar materiales
+        </Button>
+        <Button @click="router.visit('/publicaciones/create')"
+            class="bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Plus class="w-4 h-4 mr-2" />
+            Crear Publicación
+        </Button>
+    </div>
+</div>
 
             <div class="flex flex-col md:flex-row gap-4 mb-6">
                 <div class="relative flex-1">
@@ -306,105 +231,93 @@ function esDueno(pub: Publicacion): boolean {
                             </div>
                         </div>
 
-                        <div class="flex justify-end gap-2 border-t border-border pt-4">
-                            <template v-if="esDueno(pub) && userRol === 'Jefe'">
-                                <template v-if="pub.estado === 'Pendiente'">
-                                    <Button size="sm"
-                                        @click="abrirConfirmacionModeracion(pub.idpublicaciones, 'aprobar')"
-                                        class="bg-emerald-600 hover:bg-emerald-700 text-white">
-                                        <CheckCircle2 class="w-4 h-4 mr-1" />
-                                        Aprobar
-                                    </Button>
-                                    <Button size="sm"
-                                        @click="abrirConfirmacionModeracion(pub.idpublicaciones, 'rechazar')"
-                                        class="bg-amber-500 hover:bg-amber-600 text-white">
-                                        <XCircle class="w-4 h-4 mr-1" />
-                                        Rechazar
-                                    </Button>
-                                    <AlertDialog>
-                                        <AlertDialogTrigger as-child>
-                                            <Button size="sm" variant="destructive"
-                                                class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                                <Trash2 class="mr-2 h-4 w-4" />
-                                                <span>Eliminar</span>
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent class="bg-card border-border text-foreground">
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
-                                                <AlertDialogDescription class="text-muted-foreground">
-                                                    Esta acción no se puede deshacer. Se eliminará permanentemente la
-                                                    publicación "{{ pub.nombre }}".
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel
-                                                    class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
-                                                    Cancelar
-                                                </AlertDialogCancel>
-                                                <AlertDialogAction @click="deletePublicacion(pub.idpublicaciones)"
-                                                    class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                                    Sí, eliminar
-                                                </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </template>
+                       <div class="flex justify-end gap-2 border-t border-border pt-4">
+    <!-- Si está Pendiente y es Jefe: Aprobar/Rechazar/Eliminar -->
+    <template v-if="pub.estado === 'Pendiente' && userRol === 'Jefe'">
+        <Button size="sm"
+            @click="abrirConfirmacionModeracion(pub.idpublicaciones, 'aprobar')"
+            class="bg-emerald-600 hover:bg-emerald-700 text-white">
+            <CheckCircle2 class="w-4 h-4 mr-1" />
+            Aprobar
+        </Button>
+        <Button size="sm"
+            @click="abrirConfirmacionModeracion(pub.idpublicaciones, 'rechazar')"
+            class="bg-amber-500 hover:bg-amber-600 text-white">
+            <XCircle class="w-4 h-4 mr-1" />
+            Rechazar
+        </Button>
+        <AlertDialog>
+            <AlertDialogTrigger as-child>
+                <Button size="sm" variant="destructive"
+                    class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                    <Trash2 class="mr-2 h-4 w-4" />
+                    <span>Eliminar</span>
+                </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent class="bg-card border-border text-foreground">
+                <AlertDialogHeader>
+                    <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+                    <AlertDialogDescription class="text-muted-foreground">
+                        Se eliminará permanentemente la publicación "{{ pub.nombre }}".
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
+                        Cancelar
+                    </AlertDialogCancel>
+                    <AlertDialogAction @click="deletePublicacion(pub.idpublicaciones)"
+                        class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                        Sí, eliminar
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    </template>
 
-                                <template v-else>
-                                    <Link :href="`/publicaciones/${pub.idpublicaciones}/edit`">
-                                        <Button size="sm" variant="outline"
-                                            class="border-primary text-primary hover:bg-accent hover:text-primary">
-                                            <Pencil class="mr-2 h-4 w-4" />
-                                            <span>Editar</span>
-                                        </Button>
-                                    </Link>
-                                    <!-- Eliminar -->
-                                    <AlertDialog>
-                                        <AlertDialogTrigger as-child>
-                                            <Button size="sm" variant="destructive"
-                                                class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                                <Trash2 class="mr-2 h-4 w-4" />
-                                                <span>Eliminar</span>
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent class="bg-card border-border text-foreground">
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
-                                                <AlertDialogDescription class="text-muted-foreground">
-                                                    Esta acción no se puede deshacer. Se eliminará permanentemente la
-                                                    publicación "{{ pub.nombre }}".
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel
-                                                    class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
-                                                    Cancelar
-                                                </AlertDialogCancel>
-                                                <AlertDialogAction @click="deletePublicacion(pub.idpublicaciones)"
-                                                    class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                                    Sí, eliminar
-                                                </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </template>
-                            </template>
+    <!-- Si está Pendiente y es Empleado: solo mensaje -->
+    <template v-else-if="pub.estado === 'Pendiente' && userRol === 'Empresa'">
+        <span class="text-xs text-muted-foreground italic self-center">
+            Pendiente de aprobación
+        </span>
+    </template>
 
-                            <template v-else-if="esDueno(pub) && userRol === 'Empresa'">
-                                <span class="text-xs text-muted-foreground italic self-center">Pendiente de
-                                    aprobación</span>
-                            </template>
-
-                            <!-- 3. Si no es dueño: Solicitar Intercambio -->
-                            <template v-else>
-                                <Button size="sm" @click="abrirModalSolicitud(pub.idpublicaciones)"
-                                    class="bg-primary hover:bg-primary/90 text-primary-foreground">
-                                    <ArrowLeftRight class="mr-2 h-4 w-4" />
-                                    Solicitar Intercambio
-                                </Button>
-                            </template>
-                        </div>
+    <!-- Si NO está Pendiente: Editar + Eliminar -->
+    <template v-else>
+        <Link :href="`/publicaciones/${pub.idpublicaciones}/edit`">
+            <Button size="sm" variant="outline"
+                class="border-primary text-primary hover:bg-accent hover:text-primary">
+                <Pencil class="mr-2 h-4 w-4" />
+                <span>Editar</span>
+            </Button>
+        </Link>
+        <AlertDialog>
+            <AlertDialogTrigger as-child>
+                <Button size="sm" variant="destructive"
+                    class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                    <Trash2 class="mr-2 h-4 w-4" />
+                    <span>Eliminar</span>
+                </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent class="bg-card border-border text-foreground">
+                <AlertDialogHeader>
+                    <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+                    <AlertDialogDescription class="text-muted-foreground">
+                        Se eliminará permanentemente la publicación "{{ pub.nombre }}".
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
+                        Cancelar
+                    </AlertDialogCancel>
+                    <AlertDialogAction @click="deletePublicacion(pub.idpublicaciones)"
+                        class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                        Sí, eliminar
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    </template>
+</div>
                     </CardContent>
                 </Card>
             </div>
@@ -417,39 +330,7 @@ function esDueno(pub: Publicacion): boolean {
             </Card>
         </div>
 
-        <Dialog :open="openSolicitudDialog" @update:open="openSolicitudDialog = $event">
-            <DialogContent class="bg-card border-border text-foreground">
-                <DialogHeader>
-                    <DialogTitle>Solicitar Intercambio</DialogTitle>
-                    <DialogDescription class="text-muted-foreground">
-                        Escribe un mensaje para la empresa dueña del material.
-                    </DialogDescription>
-                </DialogHeader>
-
-                <div class="grid gap-4 py-4">
-                    <div class="grid gap-2">
-                        <Label for="mensaje" class="text-muted-foreground">Mensaje</Label>
-                        <Textarea id="mensaje" v-model="solicitudForm.mensaje" rows="4"
-                            placeholder="Hola, estamos interesados en tu material. ¿Lo intercambias por...?"
-                            class="bg-background border-border text-foreground" />
-                    </div>
-                </div>
-                <div class="grid gap-2">
-                    <Label for="cantidad" class="text-muted-foreground">Cantidad a solicitar</Label>
-                    <Input id="cantidad" v-model="solicitudForm.cantidad" type="number" step="0.01" min="0.01"
-                        placeholder="Ej: 50" class="bg-background border-border text-foreground" />
-                </div>
-                <DialogFooter>
-                    <Button variant="outline" @click="openSolicitudDialog = false"
-                        class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
-                        Cancelar
-                    </Button>
-                    <Button @click="enviarSolicitud" class="bg-primary hover:bg-primary/90 text-primary-foreground">
-                        Enviar Solicitud
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+       
 
         <AlertDialog :open="showModeracionDialog" @update:open="showModeracionDialog = $event">
             <AlertDialogContent class="bg-card border-border text-foreground">
@@ -482,26 +363,7 @@ function esDueno(pub: Publicacion): boolean {
             </AlertDialogContent>
         </AlertDialog>
 
-        <AlertDialog :open="showConfirmDialog" @update:open="showConfirmDialog = $event">
-            <AlertDialogContent class="bg-card border-border text-foreground">
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Confirmar Envío</AlertDialogTitle>
-                    <AlertDialogDescription class="text-muted-foreground">
-                        ¿Estás seguro de que deseas enviar esta solicitud de intercambio?
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel
-                        class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
-                        Cancelar
-                    </AlertDialogCancel>
-                    <AlertDialogAction @click="confirmarEnvio"
-                        class="bg-primary hover:bg-primary/90 text-primary-foreground">
-                        Sí, enviar
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+       
 
     </div>
 </template>
