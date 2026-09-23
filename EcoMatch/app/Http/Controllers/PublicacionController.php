@@ -15,11 +15,9 @@ class PublicacionController extends Controller
     {
         $idEmpresa = Auth::user()->idempresa;
 
+        //solo mustra publicaciones de la propia empresa
         $publicaciones = Publicacion::with(['empresa', 'categoria'])
-            ->where(function ($query) use ($idEmpresa) {
-                $query->where('idempresa', $idEmpresa)
-                    ->orWhere('estado', 'Disponible');
-            })
+            ->where('idempresa', $idEmpresa)
             ->latest('idpublicaciones')
             ->get();
 
@@ -169,7 +167,7 @@ class PublicacionController extends Controller
         return redirect()->route('publicaciones.index')->with('message', 'Publicación eliminada correctamente.');
     }
 
-         public function search(Request $request)
+    public function search(Request $request)
     {
         $request->validate([
             'lat'       => 'nullable|numeric|between:-90,90',
