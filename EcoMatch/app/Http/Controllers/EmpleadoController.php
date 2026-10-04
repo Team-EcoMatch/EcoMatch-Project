@@ -58,10 +58,22 @@ class EmpleadoController extends Controller
         return redirect()->back()->with('message', 'Empleado agregado exitosamente.');
     }
 
-    public function destroy (int $id)
+    public function toggleEstado(int $id)
+    {
+        $idEmpresa = Auth::user()->idempresa;
+        $empleado = User::where('idempresa', $idEmpresa)->findOrFail($id);
+
+        $nuevoEstado = $empleado->estado ? 0 : 1;
+        $empleado->update(['estado' => $nuevoEstado]);
+
+        $mensaje = $nuevoEstado ? 'Empleado activado correctamente.' : 'Empleado desactivado correctamente.';
+        return redirect()->back()->with('message', $mensaje);
+    }
+
+    public function destroy(int $id)
     {
         $user = User::findOrFail($id);
-        if($user->idempresa !== Auth::user()->idempresa){
+        if ($user->idempresa !== Auth::user()->idempresa) {
             abort(403, 'No tienes permiso para eliminar este empleado.');
         }
 

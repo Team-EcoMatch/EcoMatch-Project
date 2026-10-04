@@ -3,7 +3,7 @@ import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Leaf, ArrowRight, Eye, EyeOff, CheckCircle2, X, ArrowLeft, Check, ShieldCheck } from 'lucide-vue-next';
+import { Loader2, Leaf, ArrowRight, Eye, EyeOff, CheckCircle2, X, ArrowLeft, Check, ShieldCheck, Recycle, Building2, Users, TrendingUp } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
 
 const page = usePage();
@@ -82,15 +82,27 @@ const submit = () => {
 
             <section
                 class="relative hidden min-h-screen overflow-hidden bg-background lg:flex lg:flex-col lg:justify-between">
-                <div class="absolute -left-32 top-1/4 h-96 w-96 rounded-full bg-primary/10 blur-[120px]"></div>
-                <div class="absolute -right-20 bottom-0 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[140px]">
-                </div>
+                <div class="absolute top-[-15%] left-[-10%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[130px]"
+                    style="animation: drift-a 22s ease-in-out infinite;"></div>
+                <div class="absolute bottom-[-10%] right-[-5%] w-[400px] h-[400px] bg-emerald-500/8 rounded-full blur-[120px]"
+                    style="animation: drift-b 28s ease-in-out infinite;"></div>
+                <div class="absolute right-16 top-16 h-28 w-28 rounded-full border border-primary/10"></div>
+                <div class="absolute right-24 top-24 h-14 w-14 rounded-full border border-primary/10"></div>
+                <div class="absolute left-12 bottom-32 h-20 w-20 rounded-full border border-emerald-500/10"></div>
+
+                <div v-for="n in 8" :key="n" class="absolute rounded-full bg-emerald-400/20" :style="{
+                    top: `${10 + (n * 11) % 80}%`,
+                    left: `${15 + (n * 17) % 70}%`,
+                    width: '3px', height: '3px',
+                    animation: `float-dot ${4 + n}s ease-in-out infinite`,
+                    animationDelay: `${n * 0.5}s`,
+                }"></div>
 
                 <div class="relative z-10 flex min-h-screen flex-col justify-between p-12 xl:p-16">
                     <div class="flex items-center gap-3">
                         <div
-                            class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
-                            <Leaf class="h-6 w-6 text-primary" />
+                            class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-emerald-600 shadow-lg shadow-primary/20">
+                            <Leaf class="h-6 w-6 text-white" />
                         </div>
                         <div>
                             <h2 class="text-2xl font-bold tracking-tight">EcoMatch</h2>
@@ -99,22 +111,43 @@ const submit = () => {
                     </div>
 
                     <div class="max-w-xl">
-                        <h1 class="text-5xl font-extrabold leading-[1.08] tracking-tight xl:text-6xl">
+                        <div
+                            class="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-sm text-primary backdrop-blur-md">
+                            <Recycle class="h-4 w-4" />
+                            Únete a la red
+                        </div>
+
+                        <h1 class="text-4xl xl:text-5xl font-extrabold leading-[1.1] tracking-tight">
                             Únete a la red de <span class="text-primary">economía circular</span> más grande.
                         </h1>
-                        <p class="mt-7 max-w-lg text-lg leading-8 text-muted-foreground">
+
+                        <p class="mt-6 max-w-lg text-lg leading-8 text-muted-foreground">
                             Registra tu empresa, publica tus materiales de desecho y comienza a intercambiar con otras
                             empresas hoy mismo.
                         </p>
+
+                        <div class="mt-10 grid grid-cols-3 gap-4">
+                            <div class="rounded-xl border border-border/40 bg-card/30 backdrop-blur-md p-3 text-center">
+                                <Building2 class="h-5 w-5 text-primary mx-auto mb-1" />
+                                <p class="text-xs text-muted-foreground">Publica materiales</p>
+                            </div>
+                            <div class="rounded-xl border border-border/40 bg-card/30 backdrop-blur-md p-3 text-center">
+                                <Users class="h-5 w-5 text-emerald-500 mx-auto mb-1" />
+                                <p class="text-xs text-muted-foreground">Conecta empresas</p>
+                            </div>
+                            <div class="rounded-xl border border-border/40 bg-card/30 backdrop-blur-md p-3 text-center">
+                                <TrendingUp class="h-5 w-5 text-blue-500 mx-auto mb-1" />
+                                <p class="text-xs text-muted-foreground">Mide impacto</p>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="text-sm text-muted-foreground">
-                        © 2026 EcoMatch. Todos los derechos reservados.
-                    </div>
+                    <div class="text-sm text-muted-foreground">© 2026 EcoMatch. Todos los derechos reservados.</div>
                 </div>
             </section>
 
             <section class="relative flex min-h-screen flex-col overflow-hidden bg-muted/20">
+                <div class="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/5 rounded-full blur-[100px]"></div>
 
                 <div class="flex justify-between items-center w-full p-4 sm:p-6 z-20">
                     <div class="flex items-center gap-2 lg:hidden">
@@ -123,9 +156,7 @@ const submit = () => {
                         </div>
                         <span class="text-xl font-bold">EcoMatch</span>
                     </div>
-
                     <div class="hidden lg:block"></div>
-
                     <Link href="/"
                         class="group inline-flex items-center gap-2 px-4 py-2 bg-card/60 backdrop-blur-md border border-border/60 rounded-full shadow-lg text-sm font-medium text-foreground hover:bg-card/90 hover:border-primary/50 hover:text-primary transition-all duration-300">
                         <ArrowLeft class="w-4 h-4 transition-transform group-hover:-translate-x-1" />
@@ -157,199 +188,205 @@ const submit = () => {
                                     <X class="h-4 w-4" />
                                 </button>
                             </div>
-                            <div class="h-1 bg-muted">
-                                <div class="h-full bg-green-500 animate-[toast-progress_3s_linear_forwards]"></div>
-                            </div>
                         </div>
                     </Transition>
 
                     <div class="relative z-10 w-full max-w-md">
-                        <div
-                            class="rounded-2xl border border-border bg-card/90 p-7 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-9">
-
-                            <div class="mb-8">
-                                <div class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                                    <Leaf class="h-6 w-6 text-primary" />
-                                </div>
-                                <h2 class="text-3xl font-bold tracking-tight text-foreground">Crear cuenta</h2>
-                                <p class="mt-2 text-sm leading-6 text-muted-foreground">
-                                    Completa los datos de tu empresa y del administrador.
-                                </p>
+                        <div class="relative">
+                            <div
+                                class="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/15 to-emerald-500/10 blur-sm">
                             </div>
+                            <div
+                                class="relative rounded-2xl border border-border/60 bg-card/90 p-7 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-9">
 
-                            <form @submit.prevent="submit" class="space-y-5">
-
-                                <div class="space-y-4 border-b border-border pb-5">
-                                    <h3 class="text-sm font-semibold text-foreground">Datos de la Empresa</h3>
-
-                                    <div>
-                                        <Label for="nombreEmpresa" class="text-sm font-medium text-foreground">Nombre de
-                                            la Empresa</Label>
-                                        <Input id="nombreEmpresa" type="text" v-model="form.nombreEmpresa" required
-                                            autofocus placeholder="Mi Empresa Recicladora"
-                                            class="h-12 mt-1 block w-full rounded-lg border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring" />
-                                        <p v-if="form.errors.nombreEmpresa" class="text-xs text-destructive mt-1">{{
-                                            form.errors.nombreEmpresa }}</p>
+                                <div class="mb-8">
+                                    <div
+                                        class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-emerald-500/10 border border-primary/15">
+                                        <Leaf class="h-6 w-6 text-primary" />
                                     </div>
-
-                                    <div>
-                                        <Label for="direccion"
-                                            class="text-sm font-medium text-foreground">Dirección</Label>
-                                        <Input id="direccion" type="text" v-model="form.direccion" required
-                                            placeholder="Calle 123 #45-67"
-                                            class="h-12 mt-1 block w-full rounded-lg border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring" />
-                                        <p v-if="form.errors.direccion" class="text-xs text-destructive mt-1">{{
-                                            form.errors.direccion }}</p>
-                                    </div>
-
-                                    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                                        <div>
-                                            <Label for="telefono"
-                                                class="text-sm font-medium text-foreground">Teléfono</Label>
-                                            <Input id="telefono" type="tel" v-model="form.telefono" required
-                                                placeholder="3001234567"
-                                                class="h-12 mt-1 block w-full rounded-lg border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring" />
-                                            <p v-if="form.errors.telefono" class="text-xs text-destructive mt-1">{{
-                                                form.errors.telefono }}</p>
-                                        </div>
-                                        <div>
-                                            <Label for="tipoEmpresa" class="text-sm font-medium text-foreground">Tipo de
-                                                Empresa</Label>
-                                            <Input id="tipoEmpresa" type="text" v-model="form.tipoEmpresa" required
-                                                placeholder="Recicladora, Generadora..."
-                                                class="h-12 mt-1 block w-full rounded-lg border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring" />
-                                            <p v-if="form.errors.tipoEmpresa" class="text-xs text-destructive mt-1">{{
-                                                form.errors.tipoEmpresa }}</p>
-                                        </div>
-                                    </div>
+                                    <h2 class="text-3xl font-bold tracking-tight text-foreground">Crear cuenta</h2>
+                                    <p class="mt-2 text-sm leading-6 text-muted-foreground">Completa los datos de tu
+                                        empresa y del administrador.</p>
                                 </div>
 
-                                <div class="space-y-4">
-                                    <h3 class="text-sm font-semibold text-foreground">Datos del Administrador</h3>
+                                <form @submit.prevent="submit" class="space-y-5">
+                                    <div class="space-y-4 border-b border-border/50 pb-5">
+                                        <h3 class="text-sm font-semibold text-foreground">Datos de la Empresa</h3>
 
-                                    <div>
-                                        <Label for="name" class="text-sm font-medium text-foreground">Tu Nombre</Label>
-                                        <Input id="name" type="text" v-model="form.name" required
-                                            placeholder="Juan Pérez"
-                                            class="h-12 mt-1 block w-full rounded-lg border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring" />
-                                        <p v-if="form.errors.name" class="text-xs text-destructive mt-1">{{
-                                            form.errors.name }}</p>
-                                    </div>
-
-                                    <div>
-                                        <Label for="email" class="text-sm font-medium text-foreground">Correo
-                                            Electrónico</Label>
-                                        <Input id="email" type="email" v-model="form.email" required
-                                            placeholder="admin@empresa.com"
-                                            class="h-12 mt-1 block w-full rounded-lg border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring" />
-                                        <p v-if="form.errors.email" class="text-xs text-destructive mt-1">{{
-                                            form.errors.email }}</p>
-                                    </div>
-
-                                    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
                                         <div>
-                                            <Label for="password"
-                                                class="text-sm font-medium text-foreground">Contraseña</Label>
-                                            <div class="relative mt-1">
-                                                <Input id="password" :type="showPassword ? 'text' : 'password'"
-                                                    v-model="form.password" required placeholder="••••••••"
-                                                    class="h-12 block w-full rounded-lg border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring pr-10" />
-                                                <button type="button" @click="showPassword = !showPassword"
-                                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                                                    <EyeOff v-if="showPassword" class="h-5 w-5" />
-                                                    <Eye v-else class="h-5 w-5" />
-                                                </button>
-                                            </div>
+                                            <Label for="nombreEmpresa"
+                                                class="text-sm font-medium text-foreground">Nombre de la Empresa</Label>
+                                            <Input id="nombreEmpresa" type="text" v-model="form.nombreEmpresa" required
+                                                autofocus placeholder="Mi Empresa Recicladora"
+                                                class="h-12 mt-1 block w-full rounded-lg border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary" />
+                                            <p v-if="form.errors.nombreEmpresa" class="text-xs text-destructive mt-1">{{
+                                                form.errors.nombreEmpresa }}</p>
+                                        </div>
 
-                                            <div v-if="form.password.length > 0" class="mt-3 space-y-2">
-                                                <div class="flex items-center gap-2">
-                                                    <div class="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
-                                                        <div class="h-full transition-all duration-300"
-                                                            :class="fuerzaContrasena.color"
-                                                            :style="{ width: fuerzaContrasena.width }"></div>
-                                                    </div>
-                                                    <span class="text-xs font-medium" :class="fuerzaContrasena.texto">{{
-                                                        fuerzaContrasena.nivel }}</span>
+                                        <div>
+                                            <Label for="direccion"
+                                                class="text-sm font-medium text-foreground">Dirección</Label>
+                                            <Input id="direccion" type="text" v-model="form.direccion" required
+                                                placeholder="Calle 123 #45-67"
+                                                class="h-12 mt-1 block w-full rounded-lg border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary" />
+                                            <p v-if="form.errors.direccion" class="text-xs text-destructive mt-1">{{
+                                                form.errors.direccion }}</p>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                                            <div>
+                                                <Label for="telefono"
+                                                    class="text-sm font-medium text-foreground">Teléfono</Label>
+                                                <Input id="telefono" type="tel" v-model="form.telefono" required
+                                                    placeholder="3001234567"
+                                                    class="h-12 mt-1 block w-full rounded-lg border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary" />
+                                                <p v-if="form.errors.telefono" class="text-xs text-destructive mt-1">{{
+                                                    form.errors.telefono }}</p>
+                                            </div>
+                                            <div>
+                                                <Label for="tipoEmpresa"
+                                                    class="text-sm font-medium text-foreground">Tipo de Empresa</Label>
+                                                <Input id="tipoEmpresa" type="text" v-model="form.tipoEmpresa" required
+                                                    placeholder="Recicladora, Generadora..."
+                                                    class="h-12 mt-1 block w-full rounded-lg border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary" />
+                                                <p v-if="form.errors.tipoEmpresa" class="text-xs text-destructive mt-1">
+                                                    {{ form.errors.tipoEmpresa }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        <h3 class="text-sm font-semibold text-foreground">Datos del Administrador</h3>
+
+                                        <div>
+                                            <Label for="name" class="text-sm font-medium text-foreground">Tu
+                                                Nombre</Label>
+                                            <Input id="name" type="text" v-model="form.name" required
+                                                placeholder="Juan Pérez"
+                                                class="h-12 mt-1 block w-full rounded-lg border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary" />
+                                            <p v-if="form.errors.name" class="text-xs text-destructive mt-1">{{
+                                                form.errors.name }}</p>
+                                        </div>
+
+                                        <div>
+                                            <Label for="email" class="text-sm font-medium text-foreground">Correo
+                                                Electrónico</Label>
+                                            <Input id="email" type="email" v-model="form.email" required
+                                                placeholder="admin@empresa.com"
+                                                class="h-12 mt-1 block w-full rounded-lg border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary" />
+                                            <p v-if="form.errors.email" class="text-xs text-destructive mt-1">{{
+                                                form.errors.email }}</p>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                                            <div>
+                                                <Label for="password"
+                                                    class="text-sm font-medium text-foreground">Contraseña</Label>
+                                                <div class="relative mt-1">
+                                                    <Input id="password" :type="showPassword ? 'text' : 'password'"
+                                                        v-model="form.password" required placeholder="••••••••"
+                                                        class="h-12 block w-full rounded-lg border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary pr-10" />
+                                                    <button type="button" @click="showPassword = !showPassword"
+                                                        class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                                                        <EyeOff v-if="showPassword" class="h-5 w-5" />
+                                                        <Eye v-else class="h-5 w-5" />
+                                                    </button>
                                                 </div>
 
-                                                <div
-                                                    class="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5">
-                                                    <p
-                                                        class="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
-                                                        <ShieldCheck class="w-3.5 h-3.5" />
-                                                        Requisitos de la contraseña:
-                                                    </p>
-                                                    <div v-for="req in requisitos" :key="req.label"
-                                                        class="flex items-center gap-2">
-                                                        <div class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-colors"
-                                                            :class="req.cumplido ? 'bg-blue-500' : 'bg-muted-foreground/20'">
-                                                            <Check v-if="req.cumplido" class="h-2.5 w-2.5 text-white" />
-                                                            <X v-else class="h-2.5 w-2.5 text-muted-foreground" />
+                                                <div v-if="form.password.length > 0" class="mt-3 space-y-2">
+                                                    <div class="flex items-center gap-2">
+                                                        <div class="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                                                            <div class="h-full transition-all duration-300"
+                                                                :class="fuerzaContrasena.color"
+                                                                :style="{ width: fuerzaContrasena.width }"></div>
                                                         </div>
-                                                        <span class="text-xs transition-colors"
-                                                            :class="req.cumplido ? 'text-blue-500 font-medium' : 'text-muted-foreground'">
-                                                            {{ req.label }}
-                                                        </span>
+                                                        <span class="text-xs font-medium"
+                                                            :class="fuerzaContrasena.texto">{{ fuerzaContrasena.nivel
+                                                            }}</span>
+                                                    </div>
+
+                                                    <div
+                                                        class="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5">
+                                                        <p
+                                                            class="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                                                            <ShieldCheck class="w-3.5 h-3.5" />
+                                                            Requisitos de la contraseña:
+                                                        </p>
+                                                        <div v-for="req in requisitos" :key="req.label"
+                                                            class="flex items-center gap-2">
+                                                            <div class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-colors"
+                                                                :class="req.cumplido ? 'bg-blue-500' : 'bg-muted-foreground/20'">
+                                                                <Check v-if="req.cumplido"
+                                                                    class="h-2.5 w-2.5 text-white" />
+                                                                <X v-else class="h-2.5 w-2.5 text-muted-foreground" />
+                                                            </div>
+                                                            <span class="text-xs transition-colors"
+                                                                :class="req.cumplido ? 'text-blue-500 font-medium' : 'text-muted-foreground'">
+                                                                {{ req.label }}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
+
+                                                <p v-if="form.errors.password" class="text-xs text-destructive mt-1">{{
+                                                    form.errors.password }}</p>
                                             </div>
 
-                                            <p v-if="form.errors.password" class="text-xs text-destructive mt-1">{{
-                                                form.errors.password }}</p>
-                                        </div>
-                                        <div>
-                                            <Label for="password_confirmation"
-                                                class="text-sm font-medium text-foreground">Confirmar</Label>
-                                            <div class="relative mt-1">
-                                                <Input id="password_confirmation"
-                                                    :type="showPasswordConfirmation ? 'text' : 'password'"
-                                                    v-model="form.password_confirmation" required placeholder="••••••••"
-                                                    class="h-12 block w-full rounded-lg border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring pr-10" />
-                                                <button type="button"
-                                                    @click="showPasswordConfirmation = !showPasswordConfirmation"
-                                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                                                    <EyeOff v-if="showPasswordConfirmation" class="h-5 w-5" />
-                                                    <Eye v-else class="h-5 w-5" />
-                                                </button>
-                                            </div>
-
-                                            <div v-if="form.password_confirmation.length > 0"
-                                                class="flex items-center gap-2 mt-2">
-                                                <div class="flex h-4 w-4 items-center justify-center rounded-full transition-colors"
-                                                    :class="contrasenasCoinciden ? 'bg-blue-500' : 'bg-red-500'">
-                                                    <Check v-if="contrasenasCoinciden" class="h-2.5 w-2.5 text-white" />
-                                                    <X v-else class="h-2.5 w-2.5 text-white" />
+                                            <div>
+                                                <Label for="password_confirmation"
+                                                    class="text-sm font-medium text-foreground">Confirmar</Label>
+                                                <div class="relative mt-1">
+                                                    <Input id="password_confirmation"
+                                                        :type="showPasswordConfirmation ? 'text' : 'password'"
+                                                        v-model="form.password_confirmation" required
+                                                        placeholder="••••••••"
+                                                        class="h-12 block w-full rounded-lg border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-primary pr-10" />
+                                                    <button type="button"
+                                                        @click="showPasswordConfirmation = !showPasswordConfirmation"
+                                                        class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                                                        <EyeOff v-if="showPasswordConfirmation" class="h-5 w-5" />
+                                                        <Eye v-else class="h-5 w-5" />
+                                                    </button>
                                                 </div>
-                                                <span class="text-xs"
-                                                    :class="contrasenasCoinciden ? 'text-blue-500' : 'text-red-500'">
-                                                    {{ contrasenasCoinciden ? 'Las contraseñas coinciden' :
-                                                        'Las contraseñas no coinciden' }}
-                                                </span>
-                                            </div>
 
-                                            <p v-if="passwordMismatch && !contrasenasCoinciden"
-                                                class="text-xs text-destructive mt-1">
-                                                Las contraseñas no coinciden.
-                                            </p>
+                                                <div v-if="form.password_confirmation.length > 0"
+                                                    class="flex items-center gap-2 mt-2">
+                                                    <div class="flex h-4 w-4 items-center justify-center rounded-full transition-colors"
+                                                        :class="contrasenasCoinciden ? 'bg-blue-500' : 'bg-red-500'">
+                                                        <Check v-if="contrasenasCoinciden"
+                                                            class="h-2.5 w-2.5 text-white" />
+                                                        <X v-else class="h-2.5 w-2.5 text-white" />
+                                                    </div>
+                                                    <span class="text-xs"
+                                                        :class="contrasenasCoinciden ? 'text-blue-500' : 'text-red-500'">
+                                                        {{ contrasenasCoinciden ? `Las contraseñas coinciden` : `Las
+                                                        contraseñas no coinciden` }}
+                                                    </span>
+                                                </div>
+
+                                                <p v-if="passwordMismatch && !contrasenasCoinciden"
+                                                    class="text-xs text-destructive mt-1">Las contraseñas no coinciden.
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
+
+                                    <Button type="submit"
+                                        class="h-12 w-full rounded-lg shadow-lg shadow-primary/20 transition-all duration-200 bg-primary hover:bg-primary/90 text-primary-foreground"
+                                        :disabled="form.processing || !todosCumplidos || !contrasenasCoinciden">
+                                        <Loader2 v-if="form.processing" class="mr-2 h-4 w-4 animate-spin" />
+                                        <span>{{ form.processing ? 'Creando cuenta...' : 'Registrar Empresa' }}</span>
+                                        <ArrowRight v-if="!form.processing" class="ml-2 h-4 w-4" />
+                                    </Button>
+                                </form>
+
+                                <div class="mt-7 border-t border-border/50 pt-6 text-center">
+                                    <p class="text-sm text-muted-foreground">¿Ya tienes una cuenta?</p>
+                                    <Link href="/login"
+                                        class="mt-1 inline-block text-sm font-medium text-primary hover:underline">
+                                        Inicia sesión aquí
+                                    </Link>
                                 </div>
-
-                                <Button type="submit"
-                                    class="h-12 w-full rounded-lg shadow-lg transition-all duration-200"
-                                    :disabled="form.processing || !todosCumplidos || !contrasenasCoinciden">
-                                    <Loader2 v-if="form.processing" class="mr-2 h-4 w-4 animate-spin" />
-                                    <span>{{ form.processing ? 'Creando cuenta...' : 'Registrar Empresa' }}</span>
-                                    <ArrowRight v-if="!form.processing" class="ml-2 h-4 w-4" />
-                                </Button>
-                            </form>
-
-                            <div class="mt-7 border-t border-border pt-6 text-center">
-                                <p class="text-sm text-muted-foreground">¿Ya tienes una cuenta?</p>
-                                <Link href="/login"
-                                    class="mt-1 inline-block text-sm font-medium text-primary hover:underline">
-                                    Inicia sesión aquí
-                                </Link>
                             </div>
                         </div>
                     </div>
@@ -359,14 +396,42 @@ const submit = () => {
     </div>
 </template>
 
-<style>
-@keyframes toast-progress {
-    from {
-        width: 100%;
+<style scoped>
+@keyframes drift-a {
+
+    0%,
+    100% {
+        transform: translate(0, 0);
     }
 
-    to {
-        width: 0%;
+    50% {
+        transform: translate(40px, 20px);
+    }
+}
+
+@keyframes drift-b {
+
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+
+    50% {
+        transform: translate(-30px, -15px);
+    }
+}
+
+@keyframes float-dot {
+
+    0%,
+    100% {
+        transform: translateY(0);
+        opacity: 0.3;
+    }
+
+    50% {
+        transform: translateY(-25px);
+        opacity: 0.8;
     }
 }
 </style>

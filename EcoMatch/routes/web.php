@@ -19,7 +19,32 @@ Route::get('/', function () {
     if (Auth::check() && Auth::user()->currentTeam) {
         return redirect()->route('dashboard', ['current_team' => Auth::user()->currentTeam->slug]);
     }
-    return inertia('Welcome');
+
+    $totalEmpresas = \App\Models\Empresa::count();
+    $totalIntercambios = \App\Models\Solicitud::where('estado', 'Completado')->count();
+    $totalKg = \App\Models\Solicitud::where('estado', 'Completado')->sum('cantidad');
+
+    $materialesStats = \App\Models\Solicitud::where('solicitudes.estado', 'Completado')
+        ->join('publicaciones', 'solicitudes.idpublicaciones', '=', 'publicaciones.idpublicaciones')
+        ->join('categorias', 'publicaciones.idcategorias', '=', 'categorias.idcategorias')
+        ->selectRaw('categorias.nombre, SUM(solicitudes.cantidad) as total')
+        ->groupBy('categorias.nombre')
+        ->orderByDesc('total')
+        ->limit(6)
+        ->get()
+        ->map(fn($item) => [
+            'nombre' => $item->nombre,
+            'total' => round($item->total, 0),
+        ]);
+
+    return inertia('Welcome', [
+        'stats' => [
+            'empresas' => $totalEmpresas,
+            'intercambios' => $totalIntercambios,
+            'kgRecuperados' => round($totalKg, 0),
+        ],
+        'materialesStats' => $materialesStats,
+    ]);
 })->name('home');
 
 Route::prefix('{current_team}')
@@ -107,7 +132,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return back();
     })->name('notificaciones.marcarLeidaEmpresa');
 
-    
+    Route::get('/historial', [SolicitudController::class, 'historial'])->name('historial.index');
 });
 
 Route::middleware(['auth', 'verified', 'role:Jefe'])->group(function () {
@@ -120,6 +145,7 @@ Route::middleware(['auth', 'verified', 'role:Jefe'])->group(function () {
 
     Route::get('/empleados', [EmpleadoController::class, 'index'])->name('empleados.index');
     Route::post('/empleados', [EmpleadoController::class, 'store'])->name('empleados.store');
+    Route::patch('/empleados/{id}/estado', [EmpleadoController::class, 'toggleEstado'])->name('empleados.toggleEstado');
 
     Route::get('/admin/publicaciones', [AdminPublicacionController::class, 'index'])->name('admin.publicaciones.index');
     Route::patch('/admin/publicaciones/{id}/estado', [AdminPublicacionController::class, 'updateEstado'])->name('admin.publicaciones.updateEstado');
@@ -127,7 +153,6 @@ Route::middleware(['auth', 'verified', 'role:Jefe'])->group(function () {
     Route::patch('/admin/publicaciones/{id}/reject', [AdminPublicacionController::class, 'reject'])->name('admin.publicaciones.reject');
     Route::delete('/admin/publicaciones/{id}', [AdminPublicacionController::class, 'destroy'])->name('admin.publicaciones.destroy');
 
-    Route::get('/historial', [SolicitudController::class, 'historial'])->name('historial.index');
 
     Route::delete('/empleados/{id}', [EmpleadoController::class, 'destroy'])->name('empleados.destroy');
 });

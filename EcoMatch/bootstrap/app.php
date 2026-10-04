@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             SetTeamUrlDefaults::class,
+            \App\Http\Middleware\CheckUsuarioActivo::class
         ]);
 
         // ¡AQUÍ AGREGAMOS LA LÍNEA PARA CONFIAR EN LOS PROXIES DE AZURE!

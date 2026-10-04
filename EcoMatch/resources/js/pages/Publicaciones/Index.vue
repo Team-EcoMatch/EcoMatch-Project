@@ -4,22 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-
-
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
+    AlertDialogTitle, AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
-
-
-import { Pencil, Trash2, CheckCircle2, XCircle, X, Plus, Search } from 'lucide-vue-next';
+import {
+    Pencil, Trash2, CheckCircle2, XCircle, X, Plus, Search,
+    PackageCheck, Clock, Layers
+} from 'lucide-vue-next';
 import { ref, onMounted, computed } from 'vue';
 
 interface Publicacion {
@@ -32,7 +25,7 @@ interface Publicacion {
     frecuencia: string;
     estado: string;
     urlImagen: string;
-    idEmpresa: number;
+    created_at: string;
     empresa: { nombreEmpresa: string } | null;
     categoria: { idcategorias: number; nombre: string } | null;
 }
@@ -53,18 +46,18 @@ const userRol = page.props.auth?.user?.rol;
 
 const showNotification = ref(false);
 const notificationMessage = ref(props.message || '');
-
-
 const searchQuery = ref('');
 const selectedCategory = ref('all');
 
+const stats = computed(() => ({
+    activas: props.publicaciones.filter(p => p.estado === 'Disponible').length,
+    pendientes: props.publicaciones.filter(p => p.estado === 'Pendiente').length,
+    total: props.publicaciones.length,
+}));
+
 const uniqueCategories = computed(() => {
     let cats = props.publicaciones.map(p => p.categoria).filter((c): c is { idcategorias: number; nombre: string } => c !== null);
-
-    if (props.categorias) {
-        cats = cats.concat(props.categorias);
-    }
-
+    if (props.categorias) cats = cats.concat(props.categorias);
     const unique = Array.from(new Map(cats.map(c => [c.idcategorias, c])).values());
     return unique.sort((a, b) => a.nombre.localeCompare(b.nombre));
 });
@@ -78,10 +71,32 @@ const filteredPublicaciones = computed(() => {
     });
 });
 
+function getEstadoBadge(estado: string) {
+    const map: Record<string, string> = {
+        'Disponible': 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+        'Pendiente': 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+        'Agotado': 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
+        'Inactivo': 'bg-gray-500/10 text-gray-500 border-gray-500/20',
+        'Reservado': 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+        'Intercambiado': 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+    };
+    return map[estado] || 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+}
+
+function timeAgo(date: string): string {
+    const now = new Date();
+    const past = new Date(date);
+    const diff = now.getTime() - past.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    if (days > 30) return past.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    if (days > 0) return `Hace ${days} día${days !== 1 ? 's' : ''}`;
+    if (hours > 0) return `Hace ${hours} hora${hours !== 1 ? 's' : ''}`;
+    return 'Hace un momento';
+}
+
 onMounted(() => {
-    if (props.message) {
-        triggerNotification(props.message);
-    }
+    if (props.message) triggerNotification(props.message);
 });
 
 function triggerNotification(msg: string) {
@@ -101,8 +116,6 @@ function deletePublicacion(id: number) {
     });
 }
 
-
-// --- Confirmación de aprobar/rechazar con AlertDialog estilizado (reemplaza confirm()) ---
 const showModeracionDialog = ref(false);
 const moderacionPendiente = ref<{ id: number; accion: 'aprobar' | 'rechazar' } | null>(null);
 
@@ -114,9 +127,7 @@ function abrirConfirmacionModeracion(id: number, accion: 'aprobar' | 'rechazar')
 function confirmarModeracion() {
     if (!moderacionPendiente.value) return;
     const { id, accion } = moderacionPendiente.value;
-    const endpoint = accion === 'aprobar'
-        ? `/admin/publicaciones/${id}/approve`
-        : `/admin/publicaciones/${id}/reject`;
+    const endpoint = accion === 'aprobar' ? `/admin/publicaciones/${id}/approve` : `/admin/publicaciones/${id}/reject`;
     const mensajeDefault = accion === 'aprobar' ? 'Publicación aprobada.' : 'Publicación rechazada.';
 
     router.patch(endpoint, {}, {
@@ -135,7 +146,6 @@ function confirmarModeracion() {
         }
     });
 }
-
 </script>
 
 <template>
@@ -164,31 +174,70 @@ function confirmarModeracion() {
                         <X class="h-4 w-4" />
                     </button>
                 </div>
-                <div class="h-1 bg-muted">
-                    <div class="h-full bg-green-500 animate-[toast-progress_3s_linear_forwards]"></div>
-                </div>
             </div>
         </Transition>
 
         <div class="max-w-7xl mx-auto">
-           <div class="flex justify-between items-center mb-6">
-    <div>
-        <h2 class="text-2xl font-semibold">Mis Publicaciones</h2>
-        <p class="text-sm text-muted-foreground">Gestiona los materiales publicados por tu empresa.</p>
-    </div>
-    <div class="flex gap-2">
-        <Button @click="router.visit('/buscar')" variant="outline"
-            class="border-primary text-primary hover:bg-accent">
-            <Search class="w-4 h-4 mr-2" />
-            Buscar materiales
-        </Button>
-        <Button @click="router.visit('/publicaciones/create')"
-            class="bg-primary hover:bg-primary/90 text-primary-foreground">
-            <Plus class="w-4 h-4 mr-2" />
-            Crear Publicación
-        </Button>
-    </div>
-</div>
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold">Mis Publicaciones</h2>
+                    <p class="text-sm text-muted-foreground mt-1">Gestiona los materiales de tu empresa</p>
+                </div>
+                <div class="flex gap-2">
+                    <Button @click="router.visit('/buscar')" variant="outline"
+                        class="border-primary text-primary hover:bg-accent">
+                        <Search class="w-4 h-4 mr-2" />
+                        Buscar materiales
+                    </Button>
+                    <Button @click="router.visit('/publicaciones/create')"
+                        class="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg">
+                        <Plus class="w-4 h-4 mr-2" />
+                        Crear
+                    </Button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 mb-6">
+                <Card
+                    class="relative overflow-hidden border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div>
+                    <CardContent class="p-4 flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 shrink-0">
+                            <PackageCheck class="h-5 w-5 text-emerald-500" />
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-foreground tabular-nums">{{ stats.activas }}</p>
+                            <p class="text-xs text-muted-foreground">Activas</p>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card
+                    class="relative overflow-hidden border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-transparent">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-amber-500"></div>
+                    <CardContent class="p-4 flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15 shrink-0">
+                            <Clock class="h-5 w-5 text-amber-500" />
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-foreground tabular-nums">{{ stats.pendientes }}</p>
+                            <p class="text-xs text-muted-foreground">Pendientes</p>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card
+                    class="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 to-transparent">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-primary"></div>
+                    <CardContent class="p-4 flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 shrink-0">
+                            <Layers class="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-foreground tabular-nums">{{ stats.total }}</p>
+                            <p class="text-xs text-muted-foreground">Total</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
 
             <div class="flex flex-col md:flex-row gap-4 mb-6">
                 <div class="relative flex-1">
@@ -205,132 +254,134 @@ function confirmarModeracion() {
                 </select>
             </div>
 
-            <div v-if="filteredPublicaciones.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div v-if="filteredPublicaciones.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <Card v-for="pub in filteredPublicaciones" :key="pub.idpublicaciones"
-                    class="bg-card border-border shadow-none flex flex-col justify-between overflow-hidden">
-                    <img :src="pub.urlImagen" alt="Imagen material" class="w-full h-40 object-cover">
-
-                    <CardHeader>
-                        <div class="flex justify-between items-center">
-                            <CardTitle class="text-xl">{{ pub.nombre }}</CardTitle>
-                            <Badge variant="outline" class="border-primary text-primary">{{ pub.estado }}</Badge>
+                    class="overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                    <div class="relative">
+                        <img :src="pub.urlImagen" alt="Imagen material" class="w-full h-40 object-cover"
+                            @error="(e) => (e.target as HTMLImageElement).src = '/images/placeholder.png'" />
+                        <div class="absolute top-2 right-2">
+                            <span
+                                :class="['inline-flex', 'items-center', 'px-2.5', 'py-1', 'rounded-full', 'text-xs', 'font-semibold', 'border', 'backdrop-blur-md', getEstadoBadge(pub.estado)]">
+                                {{ pub.estado }}
+                            </span>
                         </div>
+                        <div class="absolute bottom-2 left-2">
+                            <span
+                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-black/60 text-white backdrop-blur-md">
+                                {{ timeAgo(pub.created_at) }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <CardHeader class="pb-2">
+                        <CardTitle class="text-lg">{{ pub.nombre }}</CardTitle>
                     </CardHeader>
 
                     <CardContent class="flex-grow flex flex-col justify-between">
                         <div class="mb-4">
-                            <p class="text-sm text-muted-foreground mb-2">{{ pub.descripcion }}</p>
-                            <div class="flex justify-between text-sm font-semibold mb-2">
-                                <span class="text-muted-foreground">Cantidad:</span>
-                                <span>{{ pub.cantidad }} {{ pub.unidadMedida }}</span>
+                            <p class="text-sm text-muted-foreground mb-3 line-clamp-2">{{ pub.descripcion }}</p>
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-xs text-muted-foreground">Cantidad:</span>
+                                <span class="text-sm font-bold text-foreground">{{ pub.cantidad }} {{ pub.unidadMedida
+                                    }}</span>
                             </div>
-                            <div class="text-xs text-muted-foreground mt-2">
-                                <div>Categoría: <strong>{{ pub.categoria?.nombre || 'N/A' }}</strong></div>
-                                <div>Empresa: <strong>{{ pub.empresa?.nombreEmpresa || 'N/A' }}</strong></div>
-                                <div>Frecuencia: {{ pub.frecuencia }}</div>
+                            <div class="text-xs text-muted-foreground space-y-0.5">
+                                <div>Categoría: <strong class="text-foreground">{{ pub.categoria?.nombre || 'N/A'
+                                        }}</strong></div>
+                                <div>Frecuencia: <strong class="text-foreground">{{ pub.frecuencia }}</strong></div>
                             </div>
                         </div>
 
-                       <div class="flex justify-end gap-2 border-t border-border pt-4">
-    <!-- Si está Pendiente y es Jefe: Aprobar/Rechazar/Eliminar -->
-    <template v-if="pub.estado === 'Pendiente' && userRol === 'Jefe'">
-        <Button size="sm"
-            @click="abrirConfirmacionModeracion(pub.idpublicaciones, 'aprobar')"
-            class="bg-emerald-600 hover:bg-emerald-700 text-white">
-            <CheckCircle2 class="w-4 h-4 mr-1" />
-            Aprobar
-        </Button>
-        <Button size="sm"
-            @click="abrirConfirmacionModeracion(pub.idpublicaciones, 'rechazar')"
-            class="bg-amber-500 hover:bg-amber-600 text-white">
-            <XCircle class="w-4 h-4 mr-1" />
-            Rechazar
-        </Button>
-        <AlertDialog>
-            <AlertDialogTrigger as-child>
-                <Button size="sm" variant="destructive"
-                    class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                    <Trash2 class="mr-2 h-4 w-4" />
-                    <span>Eliminar</span>
-                </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent class="bg-card border-border text-foreground">
-                <AlertDialogHeader>
-                    <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
-                    <AlertDialogDescription class="text-muted-foreground">
-                        Se eliminará permanentemente la publicación "{{ pub.nombre }}".
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
-                        Cancelar
-                    </AlertDialogCancel>
-                    <AlertDialogAction @click="deletePublicacion(pub.idpublicaciones)"
-                        class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                        Sí, eliminar
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    </template>
+                        <div class="flex justify-end gap-2 border-t border-border pt-4">
+                            <template v-if="pub.estado === 'Pendiente' && userRol === 'Jefe'">
+                                <Button size="sm" @click="abrirConfirmacionModeracion(pub.idpublicaciones, 'aprobar')"
+                                    class="bg-emerald-600 hover:bg-emerald-700 text-white">
+                                    <CheckCircle2 class="w-4 h-4 mr-1" />
+                                    Aprobar
+                                </Button>
+                                <Button size="sm" @click="abrirConfirmacionModeracion(pub.idpublicaciones, 'rechazar')"
+                                    class="bg-amber-500 hover:bg-amber-600 text-white">
+                                    <XCircle class="w-4 h-4 mr-1" />
+                                    Rechazar
+                                </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger as-child>
+                                        <Button size="sm" variant="destructive">
+                                            <Trash2 class="mr-2 h-4 w-4" />
+                                            Eliminar
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent class="bg-card border-border text-foreground">
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+                                            <AlertDialogDescription class="text-muted-foreground">
+                                                Se eliminará permanentemente la publicación "{{ pub.nombre }}".
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel
+                                                class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
+                                                Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction @click="deletePublicacion(pub.idpublicaciones)"
+                                                class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                                Sí, eliminar</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </template>
 
-    <!-- Si está Pendiente y es Empleado: solo mensaje -->
-    <template v-else-if="pub.estado === 'Pendiente' && userRol === 'Empresa'">
-        <span class="text-xs text-muted-foreground italic self-center">
-            Pendiente de aprobación
-        </span>
-    </template>
+                            <template v-else-if="pub.estado === 'Pendiente' && userRol === 'Empresa'">
+                                <span class="text-xs text-muted-foreground italic self-center">Pendiente de
+                                    aprobación</span>
+                            </template>
 
-    <!-- Si NO está Pendiente: Editar + Eliminar -->
-    <template v-else>
-        <Link :href="`/publicaciones/${pub.idpublicaciones}/edit`">
-            <Button size="sm" variant="outline"
-                class="border-primary text-primary hover:bg-accent hover:text-primary">
-                <Pencil class="mr-2 h-4 w-4" />
-                <span>Editar</span>
-            </Button>
-        </Link>
-        <AlertDialog>
-            <AlertDialogTrigger as-child>
-                <Button size="sm" variant="destructive"
-                    class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                    <Trash2 class="mr-2 h-4 w-4" />
-                    <span>Eliminar</span>
-                </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent class="bg-card border-border text-foreground">
-                <AlertDialogHeader>
-                    <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
-                    <AlertDialogDescription class="text-muted-foreground">
-                        Se eliminará permanentemente la publicación "{{ pub.nombre }}".
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
-                        Cancelar
-                    </AlertDialogCancel>
-                    <AlertDialogAction @click="deletePublicacion(pub.idpublicaciones)"
-                        class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                        Sí, eliminar
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    </template>
-</div>
+                            <template v-else>
+                                <Link :href="`/publicaciones/${pub.idpublicaciones}/edit`">
+                                    <Button size="sm" variant="outline"
+                                        class="border-primary text-primary hover:bg-accent hover:text-primary">
+                                        <Pencil class="mr-2 h-4 w-4" />
+                                        Editar
+                                    </Button>
+                                </Link>
+                                <AlertDialog>
+                                    <AlertDialogTrigger as-child>
+                                        <Button size="sm" variant="destructive">
+                                            <Trash2 class="mr-2 h-4 w-4" />
+                                            Eliminar
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent class="bg-card border-border text-foreground">
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+                                            <AlertDialogDescription class="text-muted-foreground">
+                                                Se eliminará permanentemente la publicación "{{ pub.nombre }}".
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel
+                                                class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
+                                                Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction @click="deletePublicacion(pub.idpublicaciones)"
+                                                class="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                                Sí, eliminar</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </template>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
 
-            <Card v-else class="bg-card border-border shadow-none">
+            <Card v-else class="border-dashed">
                 <CardContent class="text-center text-muted-foreground py-12">
-                    <p class="text-lg">No se encontraron publicaciones.</p>
-                    <p class="text-sm mt-2">Prueba con otra búsqueda.</p>
+                    <PackageCheck class="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p class="text-lg">No se encontraron publicaciones</p>
+                    <p class="text-sm mt-2">Prueba con otra búsqueda o crea una nueva publicación</p>
                 </CardContent>
             </Card>
         </div>
-
-       
 
         <AlertDialog :open="showModeracionDialog" @update:open="showModeracionDialog = $event">
             <AlertDialogContent class="bg-card border-border text-foreground">
@@ -344,16 +395,15 @@ function confirmarModeracion() {
                             disponible para todas las empresas.
                         </template>
                         <template v-else>
-                            ¿Estás seguro de que deseas <strong>rechazar</strong> esta publicación? Pasará a estado
-                            "Rechazado" y no será visible para otras empresas.
+                            ¿Estás seguro de que deseas <strong>rechazar</strong> esta publicación? No será visible para
+                            otras empresas.
                         </template>
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel
                         class="border-border text-muted-foreground hover:bg-accent hover:text-foreground">
-                        Cancelar
-                    </AlertDialogCancel>
+                        Cancelar</AlertDialogCancel>
                     <AlertDialogAction @click="confirmarModeracion" :class="moderacionPendiente?.accion === 'aprobar'
                         ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                         : 'bg-amber-500 hover:bg-amber-600 text-white'">
@@ -362,9 +412,6 @@ function confirmarModeracion() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
-
-       
-
     </div>
 </template>
 
