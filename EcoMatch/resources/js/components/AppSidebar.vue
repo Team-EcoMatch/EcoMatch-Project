@@ -29,7 +29,7 @@ const mainNavItems = computed<NavItem[]>(() => {
         { title: 'Dashboard', href: dashboardUrl.value, icon: LayoutGrid },
         { title: 'Categorías', href: '/categorias', icon: Tags },
         { title: 'Mis Publicaciones', href: '/publicaciones', icon: Boxes },
-        { title: 'Encontrar Materiales', href: '/buscar', icon: ScanSearch },
+        { title: 'Buscar Materiales', href: '/buscar', icon: ScanSearch },
         { title: 'Solicitudes', href: '/solicitudes', icon: Inbox },
         { title: 'Chats', href: '/chats', icon: MessageSquare },
         { title: 'Historial', href: '/historial', icon: History },

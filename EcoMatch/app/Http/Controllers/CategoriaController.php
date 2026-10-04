@@ -13,12 +13,19 @@ class CategoriaController extends Controller
     public function index()
     {
         $idEmpresa = Auth::user()->idempresa;
-        $categorias = Categoria::where('idempresa', $idEmpresa)->get();
-        $message = session('message');
+
+        $categorias = Categoria::where('categorias.idempresa', $idEmpresa)
+            ->leftJoin('publicaciones', function ($join) {
+                $join->on('categorias.idcategorias', '=', 'publicaciones.idcategorias')
+                    ->where('publicaciones.estado', 'Disponible');
+            })
+            ->selectRaw('categorias.idcategorias, categorias.nombre, categorias.descripcion, COALESCE(COUNT(publicaciones.idpublicaciones), 0) as publicaciones_count')
+            ->groupBy('categorias.idcategorias', 'categorias.nombre', 'categorias.descripcion')
+            ->get();
 
         return Inertia::render('Categorias/Index', [
             'categorias' => $categorias,
-            'message' => $message
+            'message' => session('message')
         ]);
     }
 
@@ -40,7 +47,9 @@ class CategoriaController extends Controller
 
         $validated = $request->validate([
             'nombre' => [
-                'required', 'string', 'max:150',
+                'required',
+                'string',
+                'max:150',
                 Rule::unique('categorias')->where(function ($query) use ($idEmpresa) {
                     return $query->where('idempresa', $idEmpresa);
                 })
@@ -63,7 +72,9 @@ class CategoriaController extends Controller
 
         $validated = $request->validate([
             'nombre' => [
-                'required', 'string', 'max:150',
+                'required',
+                'string',
+                'max:150',
                 Rule::unique('categorias')->ignore($categoria->idcategorias, 'idcategorias')->where(function ($query) use ($idEmpresa) {
                     return $query->where('idempresa', $idEmpresa);
                 })
