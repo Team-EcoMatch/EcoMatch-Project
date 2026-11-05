@@ -1,117 +1,93 @@
 <div align="center">
 
-# ♻️ EcoMatch
-
-### Plataforma de matcheo de materiales entre empresas
-
-**Conecta empresas que tienen materiales sobrantes con empresas que los necesitan.**
+♻️ EcoMatch
+Plataforma de matcheo de materiales entre empresas
+Conecta empresas que tienen materiales sobrantes con empresas que los necesitan.
 Menos desperdicio. Más economía circular. 🌱
 
 </div>
 
----
-
-## 📖 Tabla de contenidos
-
-- [📖 Acerca del proyecto](#-acerca-del-proyecto)
-- [✨ Características principales](#-características-principales)
-- [🧩 Módulos del sistema](#-módulos-del-sistema)
-- [🛠️ Stack tecnológico](#️-stack-tecnológico)
-- [🚀 Instalación](#-instalación)
-- [⚙️ Configuración de servicios externos](#️-configuración-de-servicios-externos)
-- [📁 Estructura del proyecto](#-estructura-del-proyecto)
-- [🗺️ Roadmap de desarrollo](#️-roadmap-de-desarrollo)
-- [🧑‍💻 Convenciones de código](#-convenciones-de-código)
-- [🤝 Cómo contribuir](#-cómo-contribuir)
-- [👥 Equipo](#-equipo)
-- [📄 Licencia](#-licencia)
-
----
-
-## 📖 Acerca del proyecto
-
-**EcoMatch** es una plataforma web multi-tenant (una cuenta por empresa) que permite
+📖 Tabla de contenidos
+📖 Acerca del proyecto
+✨ Características principales
+🧩 Módulos del sistema
+🛠️ Stack tecnológico
+🚀 Instalación
+⚙️ Configuración de servicios externos
+📁 Estructura del proyecto
+🧑‍💻 Convenciones de código
+🤝 Cómo contribuir
+👥 Equipo
+📄 Licencia
+📖 Acerca del proyecto
+EcoMatch es una plataforma web multi-tenant (una cuenta por empresa) que permite
 publicar materiales disponibles (excedentes, subproductos, residuos reutilizables),
-buscarlos por categoría, ubicación o empresa, abrir **solicitudes** entre empresas,
-**chatear en tiempo real** para coordinar el intercambio y visualizar todo en un
-**mapa interactivo**.
+buscarlos por categoría, ubicación o empresa, abrir solicitudes entre empresas,
+chatear en tiempo real para coordinar el intercambio y visualizar todo en un
+mapa interactivo.
 
-El proyecto se desarrolla en **5 sesiones de 7 horas (35 h totales)** y cubre **9 módulos funcionales**.
+El proyecto cubre 9 módulos funcionales.
 
-> Repositorio: [github.com/Team-EcoMatch/EcoMatch-Project](https://github.com/Team-EcoMatch/EcoMatch-Project)
+Repositorio: github.com/Team-EcoMatch/EcoMatch-Project
 
----
+✨ Características principales
+🏢 Multi-tenant con Teams — cada empresa es un equipo aislado con sus propios datos.
+🔐 Autenticación con Laravel Fortify — login, 2FA y recuperación de contraseña.
+👥 Roles y permisos — Jefe (aprueba, invita, elimina) y Empleado (opera).
+📦 Catálogo de materiales con imágenes — subida directa a Cloudinary.
+🔎 Buscador multi-criterio — categoría, empresa, ubicación y estado.
+🤝 Workflow de solicitudes — pendiente → aceptada → rechazada → completada → cancelada.
+💬 Chat en tiempo real — Laravel Reverb + Pusher + Laravel Echo.
+🚫 Bloqueo de empresas con notificaciones persistentes.
+🗺️ Mapa interactivo con Leaflet y marcadores filtrables por categoría.
+📄 Exportaciones — PDF (DomPDF) y Excel (Maatwebsite).
+🧭 Rutas type-safe con Laravel Wayfinder.
+⚡ SPA moderna vía Inertia.js (sin API REST separada).
+🧩 Módulos del sistema
+El proyecto está compuesto por 9 módulos funcionales:
 
-## ✨ Características principales
+#
+Módulo
+Descripción
+1	Dashboard	KPIs del team actual, accesos rápidos y resumen operativo.
+2	Perfil de Empresa	Edición de logo, RUC, dirección, rubro y datos públicos.
+3	Categorías	CRUD RESTful de categorías (admin por Jefe).
+4	Mis Publicaciones	Alta de materiales con fotos, estado y aprobación.
+5	Buscar Materiales	Buscador con filtros combinables, debounce y partial reloads.
+6	Solicitudes	Máquina de estados entre empresas + historial.
+7	Chats	Mensajería bidireccional en tiempo real con canales privados.
+8	Mapa Interactivo	Geolocalización de publicaciones con Leaflet + clustering.
+9	Empleados	Invitaciones por email, roles, permisos y desactivación.
 
-- 🏢 **Multi-tenant con Teams** — cada empresa es un equipo aislado con sus propios datos.
-- 🔐 **Autenticación con Laravel Fortify** — login, 2FA y recuperación de contraseña.
-- 👥 **Roles y permisos** — `Jefe` (aprueba, invita, elimina) y `Empleado` (opera).
-- 📦 **Catálogo de materiales con imágenes** — subida directa a **Cloudinary**.
-- 🔎 **Buscador multi-criterio** — categoría, empresa, ubicación y estado.
-- 🤝 **Workflow de solicitudes** — `pendiente → aceptada → rechazada → completada → cancelada`.
-- 💬 **Chat en tiempo real** — Laravel Reverb + Pusher + Laravel Echo.
-- 🚫 **Bloqueo de empresas** con notificaciones persistentes.
-- 🗺️ **Mapa interactivo** con Leaflet y marcadores filtrables por categoría.
-- 📄 **Exportaciones** — PDF (DomPDF) y Excel (Maatwebsite).
-- 🧭 **Rutas type-safe** con Laravel Wayfinder.
-- ⚡ **SPA moderna** vía Inertia.js (sin API REST separada).
+🛠️ Stack tecnológico
+Capa
+Tecnología
+Backend	Laravel 13 · PHP 8.3 · Eloquent ORM
+Frontend	Vue 3.5 · Inertia.js 3 · Tailwind CSS 4.1 · Reka UI · VueUse
+Icons	lucide-vue-next
+Bundler	Vite 8
+Routing TS	Laravel Wayfinder
+Auth	Laravel Fortify 1.37 + Teams (multi-tenant)
+Base de datos	MySQL Workbench
+Tiempo real	Laravel Reverb 1.11 + Pusher + Laravel Echo
+Mapas	Leaflet 1.9 + @vue-leaflet/vue-leaflet
+Archivos	Cloudinary PHP SDK 3.1
+Exportaciones	barryvdh/laravel-dompdf 3.1 (PDF) · maatwebsite/excel 4.0 (Excel)
+UI feedback	SweetAlert2 · notie · vue-sonner
+Calidad	Pint (formatter) · PHPStan (análisis estático) · Pest (tests)
+CI/CD	GitHub Actions
 
----
+🚀 Instalación
+✅ Requisitos previos
+PHP 8.3+ con extensiones: pdo_sqlite, mbstring, openssl, pdo, json, fileinfo
+Composer 2.x
+Node.js 20+ y npm (o pnpm / bun)
+Git y cuenta en GitHub con acceso al repo
+Cuenta en Cloudinary (para imágenes)
+(Opcional) Cuenta en Pusher o uso de Laravel Reverb local
+📥 Pasos
+bash
 
-## 🧩 Módulos del sistema
-
-El proyecto está compuesto por **9 módulos funcionales**, distribuidos en 5 sesiones:
-
-| #  | Módulo               | Descripción                                              | Sesión |
-|----|----------------------|----------------------------------------------------------|--------|
-| 1  | **Dashboard**        | KPIs del team actual, accesos rápidos y resumen operativo. | S1     |
-| 2  | **Perfil de Empresa**| Edición de logo, RUC, dirección, rubro y datos públicos.   | S1     |
-| 3  | **Categorías**       | CRUD RESTful de categorías (admin por Jefe).              | S2     |
-| 4  | **Mis Publicaciones**| Alta de materiales con fotos, estado y aprobación.         | S2     |
-| 5  | **Buscar Materiales**| Buscador con filtros combinables, debounce y partial reloads. | S3  |
-| 6  | **Solicitudes**      | Máquina de estados entre empresas + historial.            | S3     |
-| 7  | **Chats**            | Mensajería bidireccional en tiempo real con canales privados. | S4  |
-| 8  | **Mapa Interactivo** | Geolocalización de publicaciones con Leaflet + clustering. | S4     |
-| 9  | **Empleados**        | Invitaciones por email, roles, permisos y desactivación.  | S5     |
-
----
-
-## 🛠️ Stack tecnológico
-
-| Capa             | Tecnología                                                        |
-|------------------|-------------------------------------------------------------------|
-| **Backend**      | Laravel 13 · PHP 8.3 · Eloquent ORM                               |
-| **Frontend**     | Vue 3.5 · Inertia.js 3 · Tailwind CSS 4.1 · Reka UI · VueUse     |
-| **Icons**        | lucide-vue-next                                                   |
-| **Bundler**      | Vite 8                                                            |
-| **Routing TS**   | Laravel Wayfinder                                                 |
-| **Auth**         | Laravel Fortify 1.37 + Teams (multi-tenant)                       |
-| **Base de datos**| SQLite (dev) / MySQL (prod)                                        |
-| **Tiempo real**  | Laravel Reverb 1.11 + Pusher + Laravel Echo                        |
-| **Mapas**        | Leaflet 1.9 + @vue-leaflet/vue-leaflet                            |
-| **Archivos**     | Cloudinary PHP SDK 3.1                                            |
-| **Exportaciones**| barryvdh/laravel-dompdf 3.1 (PDF) · maatwebsite/excel 4.0 (Excel) |
-| **UI feedback**  | SweetAlert2 · notie · vue-sonner                                  |
-| **Calidad**      | Pint (formatter) · PHPStan (análisis estático) · Pest (tests)    |
-| **CI/CD**        | GitHub Actions                                                    |
-
----
-
-## 🚀 Instalación
-
-### ✅ Requisitos previos
-
-- **PHP 8.3+** con extensiones: `pdo_sqlite`, `mbstring`, `openssl`, `pdo`, `json`, `fileinfo`
-- **Composer 2.x**
-- **Node.js 20+** y `npm` (o `pnpm` / `bun`)
-- **Git** y cuenta en GitHub con acceso al repo
-- Cuenta en **[Cloudinary](https://cloudinary.com)** (para imágenes)
-- (Opcional) Cuenta en **[Pusher](https://pusher.com)** o uso de **Laravel Reverb** local
-
-### 📥 Pasos
-
-```bash
 # 1. Clonar el repositorio
 git clone https://github.com/Team-EcoMatch/EcoMatch-Project.git
 cd EcoMatch-Project
@@ -124,69 +100,54 @@ npm install
 cp .env.example .env
 php artisan key:generate
 
-# 4. Base de datos (SQLite por defecto en dev)
-touch database/database.sqlite
+# 4. Base de datos (MySQL Workbench)
 php artisan migrate --seed
 
 # 5. Levantar el entorno de desarrollo
 php artisan serve   # http://localhost:8000
 npm run dev          # Vite (HMR) en otra terminal
-```
+👤 Usuario de prueba
+Tras el --seed, se crean usuarios demo:
 
-### 👤 Usuario de prueba
+Rol
+Email
+Contraseña
+Jefe	jefe@ecomatch.test	password
+Empleado	empleado@ecomatch.test	password
 
-Tras el `--seed`, se crean usuarios demo:
+⚙️ Configuración de servicios externos
+Cloudinary (imágenes)
+env
 
-| Rol     | Email                    | Contraseña  |
-|---------|--------------------------|-------------|
-| Jefe    | `jefe@ecomatch.test`     | `password`  |
-| Empleado| `empleado@ecomatch.test` | `password`  |
-
----
-
-## ⚙️ Configuración de servicios externos
-
-### Cloudinary (imágenes)
-
-```env
 CLOUDINARY_CLOUD_NAME=tu_cloud_name
 CLOUDINARY_API_KEY=tu_api_key
 CLOUDINARY_API_SECRET=tu_api_secret
-```
+Tiempo real (Reverb)
+env
 
-### Tiempo real (Reverb)
-
-```env
 BROADCAST_CONNECTION=reverb
 REVERB_APP_KEY=tu_app_key
 REVERB_APP_ID=tu_app_id
 REVERB_APP_SECRET=tu_app_secret
 REVERB_HOST=127.0.0.1
 REVERB_PORT=8080
-```
-
 Levanta el servidor WebSocket:
 
-```bash
+bash
+
 php artisan reverb:start
 php artisan queue:listen   # en otra terminal
-```
+Pusher (alternativa a Reverb)
+env
 
-### Pusher (alternativa a Reverb)
-
-```env
 BROADCAST_CONNECTION=pusher
 PUSHER_APP_ID=tu_app_id
 PUSHER_APP_KEY=tu_app_key
 PUSHER_APP_SECRET=tu_app_secret
 PUSHER_APP_CLUSTER=mt1
-```
+📁 Estructura del proyecto
+text
 
----
-
-## 📁 Estructura del proyecto
-
-```
 EcoMatch-Project/
 ├── app/
 │   ├── Http/
@@ -218,57 +179,36 @@ EcoMatch-Project/
 ├── scripts/                  # Seeders masivos y utilidades
 ├── composer.json
 └── package.json
-```
+🧑‍💻 Convenciones de código
+Laravel Pint para formateo PHP (./vendor/bin/pint)
+PHPStan para análisis estático (./vendor/bin/phpstan analyse)
+Pest para tests (php artisan test)
+Commits siguiendo Conventional Commits (feat:, fix:, docs:, refactor:...)
+Una feature = una rama = un PR (revisión requerida antes de merge a main)
+bash
 
----
-
-## 🧑‍💻 Convenciones de código
-
-- **Laravel Pint** para formateo PHP (`./vendor/bin/pint`)
-- **PHPStan** para análisis estático (`./vendor/bin/phpstan analyse`)
-- **Pest** para tests (`php artisan test`)
-- Commits siguiendo **Conventional Commits** (`feat:`, `fix:`, `docs:`, `refactor:`...)
-- Una feature = una rama = un PR (revisión requerida antes de merge a `main`)
-
-```bash
 # Antes de un commit
 ./vendor/bin/pint
 npm run lint
 php artisan test
-```
+🤝 Cómo contribuir
+Haz fork del repositorio (o crea una rama si tienes acceso directo).
+Crea una rama descriptiva: git checkout -b feat/modulo-busqueda-avanzada
+Desarrolla siguiendo las convenciones de código.
+Verifica localmente: ./vendor/bin/pint && ./vendor/bin/phpstan analyse && php artisan test
+Abre un Pull Request describiendo el cambio y el módulo al que aporta.
+👥 Equipo
+Organización: Team-EcoMatch
 
----
+Proyecto educativo / académico.
 
-## 🤝 Cómo contribuir
-
-1. Haz **fork** del repositorio (o crea una rama si tienes acceso directo).
-2. Crea una rama descriptiva: `git checkout -b feat/modulo-busqueda-avanzada`
-3. Desarrolla siguiendo las **convenciones de código**.
-4. Verifica localmente: `./vendor/bin/pint && ./vendor/bin/phpstan analyse && php artisan test`
-5. Abre un **Pull Request** describiendo el cambio y el módulo al que aporta.
-
----
-
-## 👥 Equipo
-
-**Organización:** [Team-EcoMatch](https://github.com/Team-EcoMatch)
-
-> Proyecto educativo / académico — construcción guiada en 5 sesiones.
-
----
-
-## 📄 Licencia
-
-Este proyecto está bajo licencia **MIT**. Puedes usarlo, modificarlo y distribuirlo libremente.
-
----
+📄 Licencia
+Este proyecto está bajo licencia MIT. Puedes usarlo, modificarlo y distribuirlo libremente.
 
 <div align="center">
 
-**♻️ Menos desperdicio. Más economía circular.**
+♻️ Menos desperdicio. Más economía circular.
 
-Hecho por:
-Julián David Reyes Villate y
-Juan Sebastián Chaparro Salamanca 
+Hecho por Julián David Reyes Villate y Juan Sebastián Chaparro Salamanca
 
 </div>
