@@ -336,7 +336,7 @@ Este proyecto está bajo licencia **MIT**. Puedes usarlo, modificarlo y distribu
 **♻️ Menos desperdicio. Más economía circular.**
 
 Hecho por:
-Julián David Reyes Villate
+Julián David Reyes Villate,
 Juan Sebastián Chaparro Salamanca 
 
 </div>
