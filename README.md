@@ -222,74 +222,6 @@ EcoMatch-Project/
 
 ---
 
-## 🗺️ Roadmap de desarrollo
-
-El proyecto se construye en **5 sesiones de 7 horas** cada una (35 h en total). Cada sesión cubre 1–2 módulos y entrega un resultado verificable.
-
-### 🟢 S1 — Dashboard + Perfil de Empresa *(7 h)*
-**Énfasis:** Creación del entorno y arquitectura base.
-
-- Entorno levantado (`php artisan serve` + `npm run dev`)
-- Dashboard renderizado con KPIs del team actual
-- Edición del Perfil de Empresa (logo, RUC, dirección, rubro)
-- Login verificado con Laravel Fortify
-
-**Módulos:** `1. Dashboard` · `2. Perfil de Empresa`
-
----
-
-### 🟢 S2 — Categorías + Mis Publicaciones *(7 h)*
-**Énfasis:** Construcción del catálogo de materiales.
-
-- CRUD RESTful de categorías (7 métodos del controlador)
-- Form Requests con validación server-side y mensajes en español
-- Subida de imágenes a **Cloudinary** (directa y firmada)
-- Flujo de aprobación restringido al rol `Jefe` (`PATCH /publicaciones/{id}/approve`)
-- Vistas Inertia con formularios create/edit y SweetAlert2
-
-**Módulos:** `3. Categorías` · `4. Mis Publicaciones`
-
----
-
-### 🟢 S3 — Buscar Materiales + Solicitudes *(7 h)*
-**Énfasis:** Implementación de búsqueda y workflow.
-
-- Buscador multi-criterio con `when()` y eager loading (`with()`) — evita N+1
-- Máquina de estados de solicitudes: `pendiente → aceptada → rechazada → completada → cancelada`
-- Vista `/historial` paginada por empresa logueada
-- Vue con `@vueuse/core` (debounce 300 ms) y partial reloads de Inertia
-- Laravel Wayfinder para rutas tipadas en TypeScript
-
-**Módulos:** `5. Buscar Materiales` · `6. Solicitudes`
-
----
-
-### 🟢 S4 — Chats + Mapa Interactivo *(7 h)*
-**Énfasis:** Integración de tiempo real y geolocalización.
-
-- **Chat bidireccional en tiempo real** con Laravel Reverb + Pusher + Laravel Echo
-- Evento `MessageSent` (implements `ShouldBroadcast`) en canal privado `private-chat.{solicitud_id}`
-- Autorización de canales en `routes/channels.php`
-- Sistema de **bloqueo de empresas** con notificaciones persistentes
-- **Mapa interactivo** Leaflet con marcadores por categoría y filtros laterales
-
-**Módulos:** `7. Chats` · `8. Mapa Interactivo`
-
----
-
-### 🟢 S5 — Empleados + Integración final *(7 h)*
-**Énfasis:** Gestión de equipo y reportes.
-
-- Modelo `Empleado` + `TeamInvitationController` con `accept_token` por email
-- Vista `/empleados` con invitación y listado del team
-- Reporte **PDF con gráficos** (DomPDF + Chart.js)
-- Reporte **Excel** con plantilla (Maatwebsite)
-- Pipeline CI/CD verde en GitHub Actions
-
-**Módulos:** `9. Empleados` · `Integración final`
-
----
-
 ## 🧑‍💻 Convenciones de código
 
 - **Laravel Pint** para formateo PHP (`./vendor/bin/pint`)
@@ -336,7 +268,7 @@ Este proyecto está bajo licencia **MIT**. Puedes usarlo, modificarlo y distribu
 **♻️ Menos desperdicio. Más economía circular.**
 
 Hecho por:
-Julián David Reyes Villate,
+Julián David Reyes Villate y
 Juan Sebastián Chaparro Salamanca 
 
 </div>
